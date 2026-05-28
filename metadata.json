@@ -1,0 +1,6 @@
+{
+  "name": "Vintage Canvas & Text Notebook",
+  "description": "A classic, light-themed note-making app featuring handwriting canvases, rich text notebooks with ruled patterns and flexible page sizes, and full document annotation, with folders and cross-platform cloud sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
