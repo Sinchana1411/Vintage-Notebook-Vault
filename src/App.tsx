@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as pdfjsLib from 'pdfjs-dist';
 import { 
   Folder, Book, Layers, FileText, PenTool, Search, 
   HelpCircle, Menu, ChevronLeft, RefreshCw 
@@ -185,6 +186,135 @@ export default function App() {
   };
 
   const handleImportDocument = (title: string, content: string, type: 'txt' | 'image' | 'pdf', folderId: string | null) => {
+    if (type === 'pdf') {
+      let importedFolder = workspace.folders.find(
+        f => f.name.toLowerCase() === 'imported documents' && f.section === 'text'
+      );
+      
+      let isNewFolder = false;
+      if (!importedFolder) {
+        importedFolder = {
+          id: `f-txt-imported-${Date.now()}`,
+          name: 'Imported documents',
+          section: 'text',
+          createdAt: Date.now()
+        };
+        isNewFolder = true;
+      }
+
+      const activeFolderId = importedFolder.id;
+      const notebookId = `nb-txt-${Date.now()}`;
+      
+      const newNotebook: Notebook = {
+        id: notebookId,
+        folderId: activeFolderId,
+        name: title.replace(/\.[^/.]+$/, ""),
+        section: 'text',
+        createdAt: Date.now(),
+        coverColor: '#0f172a',
+        coverStyle: 'parchment',
+        coverLabel: 'vintage'
+      };
+
+      const chapterId = `ch-${Date.now()}`;
+      const newChapter: Chapter = {
+        id: chapterId,
+        notebookId: notebookId,
+        name: 'Manuscript Pages',
+        createdAt: Date.now(),
+        order: 1
+      };
+
+      const parsePdfPages = async () => {
+        try {
+          const base64Data = content.includes(',') ? content.split(',')[1] : content;
+          const binaryString = window.atob(base64Data);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          const ver = pdfjsLib.version || '4.1.14';
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ver}/pdf.worker.min.mjs`;
+
+          const loadingTask = pdfjsLib.getDocument({ data: bytes });
+          const pdf = await loadingTask.promise;
+          const numPages = pdf.numPages || 1;
+
+          const pages: { title: string; content: string }[] = [];
+          for (let i = 1; i <= numPages; i++) {
+            try {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              const textItems = textContent.items.map((item: any) => item.str);
+              const pageText = textItems.join('\n');
+              pages.push({
+                title: `Page ${i}`,
+                content: pageText
+              });
+            } catch (pageErr) {
+              pages.push({
+                title: `Page ${i}`,
+                content: ''
+              });
+            }
+          }
+          return pages;
+        } catch (err) {
+          console.warn("pdfjs-dist error, fallback to default pages:", err);
+          return [
+            { title: "Page 1", content: `Archived transcripts from document: ${title}.\nUse the text and design workbench to scribe your custom analysis here.` },
+            { title: "Page 2", content: "" },
+            { title: "Page 3", content: "" }
+          ];
+        }
+      };
+
+      parsePdfPages().then((parsedPages) => {
+        const generatedNotepapers: Notepaper[] = parsedPages.map((pg, idx) => {
+          const textLines = pg.content.split('\n').filter(line => line.trim().length > 0);
+          const htmlContent = textLines.length > 0
+            ? textLines.map(line => `<p style="font-family: Georgia, serif; font-size: 16px; color: #333; line-height: 1.8; margin-bottom: 1em;">${line}</p>`).join('')
+            : `<p style="font-family: Georgia, serif; font-size: 16px; color: #333; line-height: 1.8; margin-bottom: 1em;"></p>`;
+
+          return {
+            id: `p-${Date.now()}-${idx}`,
+            chapterId: chapterId,
+            title: pg.title,
+            createdAt: Date.now() + idx,
+            paperStyle: 'ruled',
+            pageSize: 'Letter',
+            hasMargin: true,
+            rawText: pg.content,
+            formattedHtml: htmlContent,
+            tables: [],
+            charts: [],
+            shapes: [],
+            drawingsData: ''
+          };
+        });
+
+        setWorkspace(prev => {
+          const updatedFolders = isNewFolder && importedFolder ? [...prev.folders, importedFolder] : prev.folders;
+          return {
+            ...prev,
+            folders: updatedFolders,
+            notebooks: [...prev.notebooks, newNotebook],
+            chapters: [...prev.chapters, newChapter],
+            notepapers: [...prev.notepapers, ...generatedNotepapers]
+          };
+        });
+
+        if (generatedNotepapers.length > 0) {
+          setActiveItemId(generatedNotepapers[0].id);
+          setActiveItemType('page');
+          setSelectedSection('text');
+        }
+      });
+      return;
+    }
+
     const newDoc: ImportedDocument = {
       id: `doc-${Date.now()}`,
       folderId,
