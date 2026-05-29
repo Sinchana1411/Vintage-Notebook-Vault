@@ -103,6 +103,18 @@ export interface FormattedText {
   html: string;
 }
 
+export interface StickyNote {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string; // background Tailwind class or hex color
+  shape: 'square' | 'rectangle' | 'circle';
+  createdAt: number;
+}
+
 export interface Notepaper {
   id: string;
   chapterId: string; // Belongs to a chapter
@@ -125,6 +137,10 @@ export interface Notepaper {
   // Text notes fields
   rawText?: string;
   formattedHtml?: string;
+  leftMarginHtml?: string;
+  rightMarginHtml?: string;
+  topMarginHtml?: string;
+  bottomMarginHtml?: string;
   tables?: TableData[];
   charts?: ChartData[];
   shapes?: ShapeElement[];
@@ -132,6 +148,7 @@ export interface Notepaper {
   // Handwriting/Drawing fields (stored as dataURL or stroke paths for SVG/Canvas rendering)
   drawingsData?: string; // canvas drawings serialized as dataURL (or high quality SVG data)
   strokeData?: string; // fallback SVG stroke path data
+  stickyNotes?: StickyNote[];
 }
 
 export interface ImportedDocument {
@@ -155,6 +172,7 @@ export interface ImportedDocument {
   marginSide?: 'left' | 'right' | 'both';
   hasHorizontalMargin?: boolean;
   customMargins?: CustomMargin[];
+  stickyNotes?: StickyNote[];
 }
 
 // Top level workspace format
@@ -165,4 +183,5 @@ export interface VintageWorkspaceData {
   chapters: Chapter[];
   notepapers: Notepaper[];
   documents: ImportedDocument[];
+  dashboardStickyNotes?: StickyNote[];
 }

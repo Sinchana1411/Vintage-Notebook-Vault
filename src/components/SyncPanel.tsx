@@ -53,7 +53,7 @@ export default function SyncPanel({
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(workspace, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `scriptorium_workspace_backup.vnote`);
+    downloadAnchor.setAttribute("download", `vintage_workspace_backup.vnote`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -71,7 +71,7 @@ export default function SyncPanel({
             setSyncState('synced');
             setLastSynced(new Date().toLocaleTimeString());
           } else {
-            alert("Invalid Scriptorium Format. Please confirm this is a valid .vnote workspace backup.");
+            alert("Invalid Vintage Workspace Format. Please confirm this is a valid .vnote workspace backup.");
           }
         } catch (error) {
           alert("Error decoding file. Please ensure it is a JSON format workspace.");
@@ -269,7 +269,7 @@ export default function SyncPanel({
           <Cloud className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="font-display text-lg font-bold text-[#3e2723]">The Scriptorium Workspace</h1>
+          <h1 className="font-display text-lg font-bold text-[#3e2723]">The Vintage Workspace</h1>
           <div className="flex items-center gap-2 text-xs text-[#5c4033]">
             <span className="inline-block h-2/2 w-2 rounded-full bg-emerald-600">●</span>
             <span>Cloud-Synced Archive</span>

@@ -5,6 +5,7 @@ import {
   X, Calendar, Edit3, Trash2, Library, BookOpen, Settings, Filter
 } from 'lucide-react';
 import { VintageWorkspaceData, Folder, Notebook, Chapter, Notepaper, ImportedDocument } from '../types';
+import { StickyNotesSectionLayer } from './StickyNoteOverlay';
 
 interface CabinetDashboardProps {
   workspace: VintageWorkspaceData;
@@ -21,6 +22,7 @@ interface CabinetDashboardProps {
   ) => void;
   onUpdateNotebook: (updated: Notebook) => void;
   onDeleteNode: (id: string, type: 'folder' | 'notebook' | 'chapter' | 'page' | 'document') => void;
+  onUpdateWorkspace: (updated: VintageWorkspaceData) => void;
 }
 
 export default function CabinetDashboard({
@@ -30,8 +32,43 @@ export default function CabinetDashboard({
   onCreateFolder,
   onCreateNotebook,
   onUpdateNotebook,
-  onDeleteNode
+  onDeleteNode,
+  onUpdateWorkspace
 }: CabinetDashboardProps) {
+  const handleAddStickyNote = () => {
+    const newNote = {
+      id: `sticky-${Date.now()}`,
+      text: '',
+      x: 350 + ((workspace.dashboardStickyNotes?.length || 0) * 15),
+      y: 110 + ((workspace.dashboardStickyNotes?.length || 0) * 15),
+      width: 160,
+      height: 160,
+      color: 'bg-[#fef9c3] border-[#fef08a] text-yellow-950',
+      shape: 'square' as const,
+      createdAt: Date.now()
+    };
+    onUpdateWorkspace({
+      ...workspace,
+      dashboardStickyNotes: [...(workspace.dashboardStickyNotes || []), newNote]
+    });
+  };
+
+  const handleUpdateStickyNote = (id: string, updates: Partial<any>) => {
+    onUpdateWorkspace({
+      ...workspace,
+      dashboardStickyNotes: (workspace.dashboardStickyNotes || []).map(note =>
+        note.id === id ? { ...note, ...updates } : note
+      )
+    });
+  };
+
+  const handleDeleteStickyNote = (id: string) => {
+    onUpdateWorkspace({
+      ...workspace,
+      dashboardStickyNotes: (workspace.dashboardStickyNotes || []).filter(note => note.id !== id)
+    });
+  };
+
   const [activeTab, setActiveTab] = useState<'cabinet' | 'all-files'>('cabinet');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
@@ -89,7 +126,7 @@ export default function CabinetDashboard({
     velvet: 'opacity-15 pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white to-black mix-blend-overlay'
   };
 
-  // Compile folders across Scriptorium
+  // Compile folders across Vintage Workspace
   const allFolders = workspace.folders;
 
   // Compile notebooks
@@ -195,41 +232,51 @@ export default function CabinetDashboard({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#fdfbf7] p-6 overflow-y-auto vintage-scroll font-serif">
+    <div className="flex-1 flex flex-col h-full bg-[#fdfbf7] p-6 overflow-y-auto vintage-scroll font-serif relative">
       {/* Header Dashboard section */}
       <div className="border-b border-[#ebdcb9] pb-4 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-extrabold text-[#3e2723] uppercase tracking-wider flex items-center gap-2">
             <Library className="h-8 w-8 text-[#8c2522]" />
-            <span>Filing Cabinet Scriptorium</span>
+            <span>Filing Cabinet Vintage Workspace</span>
           </h1>
           <p className="text-xs text-[#5c4033] mt-1 italic">
             Unlock the archival index of all parchment, ledger volumes, and transcripts bound inside your study.
           </p>
         </div>
 
-        {/* Dashboard tabs */}
-        <div className="flex items-center gap-2 bg-[#fcf8f2] p-1.5 rounded border border-[#ebdcb9] self-stretch md:self-auto text-xs">
-          <button
-            onClick={() => setActiveTab('cabinet')}
-            className={`py-2 px-4 rounded font-bold transition-all ${
-              activeTab === 'cabinet' 
-                ? 'bg-[#8c2522] text-[#fdfbf7] shadow' 
-                : 'text-[#5c4033] hover:bg-[#faf4eb]'
-            }`}
-          >
-            📂 Filing Cabinets & Shelves
-          </button>
-          <button
-            onClick={() => setActiveTab('all-files')}
-            className={`py-2 px-4 rounded font-bold transition-all ${
-              activeTab === 'all-files' 
-                ? 'bg-[#8c2522] text-[#fdfbf7] shadow' 
-                : 'text-[#5c4033] hover:bg-[#faf4eb]'
-            }`}
-          >
-            📜 Unified Scribe Desktop
-          </button>
+        {/* Dashboard tabs with sticky note adder */}
+        <div className="flex items-center gap-3 self-stretch md:self-auto flex-wrap">
+          <StickyNotesSectionLayer
+            notes={workspace.dashboardStickyNotes}
+            onAddNote={handleAddStickyNote}
+            onUpdateNote={handleUpdateStickyNote}
+            onDeleteNote={handleDeleteStickyNote}
+            sectionLabel="Dashboard"
+          />
+
+          <div className="flex items-center gap-2 bg-[#fcf8f2] p-1.5 rounded border border-[#ebdcb9] text-xs">
+            <button
+              onClick={() => setActiveTab('cabinet')}
+              className={`py-2 px-4 rounded font-bold transition-all ${
+                activeTab === 'cabinet' 
+                  ? 'bg-[#8c2522] text-[#fdfbf7] shadow' 
+                  : 'text-[#5c4033] hover:bg-[#faf4eb]'
+              }`}
+            >
+              📂 Filing Cabinets & Shelves
+            </button>
+            <button
+              onClick={() => setActiveTab('all-files')}
+              className={`py-2 px-4 rounded font-bold transition-all ${
+                activeTab === 'all-files' 
+                  ? 'bg-[#8c2522] text-[#fdfbf7] shadow' 
+                  : 'text-[#5c4033] hover:bg-[#faf4eb]'
+              }`}
+            >
+              📜 Unified Scribe Desktop
+            </button>
+          </div>
         </div>
       </div>
 
@@ -742,7 +789,7 @@ export default function CabinetDashboard({
                 {filteredSearchableFiles.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-stone-400 italic">
-                      No manuscript match found inside Scriptorium logs.
+                      No manuscript match found inside Vintage Workspace logs.
                     </td>
                   </tr>
                 ) : (

@@ -364,6 +364,7 @@ export default function App() {
               onCreateNotebook={handleCreateNotebook}
               onUpdateNotebook={handleUpdateNotebook}
               onDeleteNode={handleDeleteNode}
+              onUpdateWorkspace={setWorkspace}
             />
           ) : selectedSection === 'documents' ? (
             <DocumentAnnotator

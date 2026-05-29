@@ -5,6 +5,7 @@ import {
   ChevronsRight, FileText, LayoutTemplate, ChevronUp, ChevronDown, Sliders 
 } from 'lucide-react';
 import { Notepaper, PageSize, PaperStyle, TableData, ChartData, ShapeElement, CustomMargin } from '../types';
+import { StickyNotesSectionLayer, StickyNoteCard } from './StickyNoteOverlay';
 
 export const colorClassMap: Record<string, { bg: string; text: string; border: string; bgHover: string }> = {
   transparent: { bg: 'bg-transparent', text: 'text-stone-800', border: 'border-stone-300', bgHover: 'hover:bg-stone-50' },
@@ -77,6 +78,17 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
   const [zoom, setZoom] = useState<number>(1.0);
   const editorRef = React.useRef<HTMLDivElement | null>(null);
 
+  // Margin editorial states and references
+  const [leftMarginContent, setLeftMarginContent] = useState<string>('');
+  const [rightMarginContent, setRightMarginContent] = useState<string>('');
+  const [topMarginContent, setTopMarginContent] = useState<string>('');
+  const [bottomMarginContent, setBottomMarginContent] = useState<string>('');
+
+  const leftMarginRef = React.useRef<HTMLDivElement | null>(null);
+  const rightMarginRef = React.useRef<HTMLDivElement | null>(null);
+  const topMarginRef = React.useRef<HTMLDivElement | null>(null);
+  const bottomMarginRef = React.useRef<HTMLDivElement | null>(null);
+
   // Table customizer active states
   const [selectedCell, setSelectedCell] = useState<{ tableIdx: number; rIdx: number; cIdx: number } | null>(null);
   const [selectedRow, setSelectedRow] = useState<{ tableIdx: number; rIdx: number } | null>(null);
@@ -119,6 +131,23 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
       if (editorRef.current) {
         editorRef.current.innerHTML = pageItem.formattedHtml || '';
       }
+
+      setLeftMarginContent(pageItem.leftMarginHtml || '');
+      if (leftMarginRef.current) {
+        leftMarginRef.current.innerHTML = pageItem.leftMarginHtml || '';
+      }
+      setRightMarginContent(pageItem.rightMarginHtml || '');
+      if (rightMarginRef.current) {
+        rightMarginRef.current.innerHTML = pageItem.rightMarginHtml || '';
+      }
+      setTopMarginContent(pageItem.topMarginHtml || '');
+      if (topMarginRef.current) {
+        topMarginRef.current.innerHTML = pageItem.topMarginHtml || '';
+      }
+      setBottomMarginContent(pageItem.bottomMarginHtml || '');
+      if (bottomMarginRef.current) {
+        bottomMarginRef.current.innerHTML = pageItem.bottomMarginHtml || '';
+      }
     }
   }, [pageItem?.id]);
 
@@ -128,6 +157,37 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
       ...pageItem,
       ...updates
     });
+  };
+
+  const handleAddStickyNote = () => {
+    if (!pageItem) return;
+    const currentNotes = pageItem.stickyNotes || [];
+    const newNote = {
+      id: `sticky-${Date.now()}`,
+      text: '',
+      x: 150 + (currentNotes.length * 15),
+      y: 200 + (currentNotes.length * 15),
+      width: 160,
+      height: 160,
+      color: 'bg-[#fef9c3] border-[#fef08a] text-yellow-950',
+      shape: 'square' as const,
+      createdAt: Date.now()
+    };
+    savePageChanges({ stickyNotes: [...currentNotes, newNote] });
+  };
+
+  const handleUpdateStickyNote = (id: string, updates: Partial<any>) => {
+    if (!pageItem) return;
+    const updatedNotes = (pageItem.stickyNotes || []).map(note =>
+      note.id === id ? { ...note, ...updates } : note
+    );
+    savePageChanges({ stickyNotes: updatedNotes });
+  };
+
+  const handleDeleteStickyNote = (id: string) => {
+    if (!pageItem) return;
+    const updatedNotes = (pageItem.stickyNotes || []).filter(note => note.id !== id);
+    savePageChanges({ stickyNotes: updatedNotes });
   };
 
   const addCustomMargin = (type: 'vertical-left' | 'vertical-right' | 'horizontal-top' | 'horizontal-bottom') => {
@@ -208,6 +268,30 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
     const val = e.currentTarget.innerHTML;
     setHtmlContent(val);
     savePageChanges({ formattedHtml: val });
+  };
+
+  const handleLeftMarginChange = (e: React.FormEvent<HTMLDivElement>) => {
+    const val = e.currentTarget.innerHTML;
+    setLeftMarginContent(val);
+    savePageChanges({ leftMarginHtml: val });
+  };
+
+  const handleRightMarginChange = (e: React.FormEvent<HTMLDivElement>) => {
+    const val = e.currentTarget.innerHTML;
+    setRightMarginContent(val);
+    savePageChanges({ rightMarginHtml: val });
+  };
+
+  const handleTopMarginChange = (e: React.FormEvent<HTMLDivElement>) => {
+    const val = e.currentTarget.innerHTML;
+    setTopMarginContent(val);
+    savePageChanges({ topMarginHtml: val });
+  };
+
+  const handleBottomMarginChange = (e: React.FormEvent<HTMLDivElement>) => {
+    const val = e.currentTarget.innerHTML;
+    setBottomMarginContent(val);
+    savePageChanges({ bottomMarginHtml: val });
   };
 
   // Insert Rich Formatted Tables
@@ -377,12 +461,35 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
   // Text Selection tool triggers
   const applyStyle = (command: string, value: string = '') => {
     document.execCommand(command, false, value);
-    // Sync text back to save
+    const updates: Partial<Notepaper> = {};
+    
     const editor = document.getElementById('vintage-content-editor');
     if (editor) {
       setHtmlContent(editor.innerHTML);
-      savePageChanges({ formattedHtml: editor.innerHTML });
+      updates.formattedHtml = editor.innerHTML;
     }
+    const leftEditor = document.getElementById('vintage-left-margin-editor');
+    if (leftEditor) {
+      setLeftMarginContent(leftEditor.innerHTML);
+      updates.leftMarginHtml = leftEditor.innerHTML;
+    }
+    const rightEditor = document.getElementById('vintage-right-margin-editor');
+    if (rightEditor) {
+      setRightMarginContent(rightEditor.innerHTML);
+      updates.rightMarginHtml = rightEditor.innerHTML;
+    }
+    const topEditor = document.getElementById('vintage-top-margin-editor');
+    if (topEditor) {
+      setTopMarginContent(topEditor.innerHTML);
+      updates.topMarginHtml = topEditor.innerHTML;
+    }
+    const bottomEditor = document.getElementById('vintage-bottom-margin-editor');
+    if (bottomEditor) {
+      setBottomMarginContent(bottomEditor.innerHTML);
+      updates.bottomMarginHtml = bottomEditor.innerHTML;
+    }
+    
+    savePageChanges(updates);
   };
 
   const applyCustomFont = (style: 'serif' | 'display' | 'cursive' | 'mono') => {
@@ -623,6 +730,20 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
               title="Reset Zoom"
             >
               Reset
+            </button>
+          </div>
+
+          {/* Sticky Notes Button */}
+          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
+            <button
+              type="button"
+              onClick={handleAddStickyNote}
+              disabled={!pageItem}
+              className="flex items-center gap-1 p-1 px-2 pb-1.5 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/25 rounded shadow-xs text-[11px] font-semibold cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Add customizable Sticky Note onto this note page"
+            >
+              <span className="text-amber-700">📌</span>
+              <span>Add Sticky Note</span>
             </button>
           </div>
 
@@ -952,6 +1073,89 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
             <div className={`absolute inset-0 pointer-events-none opacity-45 z-0 ${
               paperStyle === 'ruled' ? 'paper-ruled' : 'paper-grid'
             }`} />
+          )}
+
+          {/* Margins Separate Editors (Side Scribbling Columns) */}
+          {hasMargin && (marginSide === 'left' || marginSide === 'both') && (
+            <div
+              id="vintage-left-margin-editor"
+              ref={leftMarginRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={handleLeftMarginChange}
+              placeholder="Scribe side note..."
+              className="absolute z-20 outline-none text-[#5c4033] hover:cursor-text text-lg leading-relaxed select-text overflow-y-auto px-1 empty:before:content-[attr(placeholder)] empty:before:text-[#ebdcb9] hover:empty:before:text-[#8c2522]/80 focus:empty:before:text-[#8c2522]/80 empty:before:font-serif empty:before:italic empty:before:text-xs"
+              style={{
+                left: '12px',
+                width: `${marginPositionLeft - 22}px`,
+                top: `${hasHorizontalMargin ? marginPositionTop + 20 : 120}px`,
+                bottom: `${hasHorizontalMargin ? marginPositionBottom + 30 : 60}px`,
+                fontFamily: 'var(--font-cursive), "Alex Brush", cursive',
+                textAlign: 'left',
+              }}
+            />
+          )}
+
+          {hasMargin && (marginSide === 'right' || marginSide === 'both') && (
+            <div
+              id="vintage-right-margin-editor"
+              ref={rightMarginRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={handleRightMarginChange}
+              placeholder="Scribe side note..."
+              className="absolute z-20 outline-none text-[#5c4033] hover:cursor-text text-lg leading-relaxed select-text overflow-y-auto px-1 empty:before:content-[attr(placeholder)] empty:before:text-[#ebdcb9] hover:empty:before:text-[#8c2522]/80 focus:empty:before:text-[#8c2522]/80 empty:before:font-serif empty:before:italic empty:before:text-xs"
+              style={{
+                right: '12px',
+                width: `${marginPositionRight - 22}px`,
+                top: `${hasHorizontalMargin ? marginPositionTop + 20 : 120}px`,
+                bottom: `${hasHorizontalMargin ? marginPositionBottom + 30 : 60}px`,
+                fontFamily: 'var(--font-cursive), "Alex Brush", cursive',
+                textAlign: 'left',
+              }}
+            />
+          )}
+
+          {hasMargin && hasHorizontalMargin && (
+            <div
+              id="vintage-top-margin-editor"
+              ref={topMarginRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={handleTopMarginChange}
+              placeholder="Header annotation..."
+              className="absolute z-20 outline-none text-[#5c4033] hover:cursor-text text-sm select-text overflow-hidden empty:before:content-[attr(placeholder)] empty:before:text-[#ebdcb9] hover:empty:before:text-[#8c2522]/80 focus:empty:before:text-[#8c2522]/80 empty:before:font-serif empty:before:italic empty:before:text-xs flex items-center justify-center"
+              style={{
+                top: '8px',
+                height: `${marginPositionTop - 16}px`,
+                left: `${marginSide !== 'right' ? marginPositionLeft + 24 : 48}px`,
+                right: `${marginSide !== 'left' ? marginPositionRight + 24 : 48}px`,
+                fontFamily: 'var(--font-serif), serif',
+                textAlign: 'center',
+                opacity: 0.8
+              }}
+            />
+          )}
+
+          {hasMargin && hasHorizontalMargin && (
+            <div
+              id="vintage-bottom-margin-editor"
+              ref={bottomMarginRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={handleBottomMarginChange}
+              placeholder="Footer annotation..."
+              className="absolute z-20 outline-none text-[#5c4033] hover:cursor-text text-sm select-text overflow-hidden empty:before:content-[attr(placeholder)] empty:before:text-[#ebdcb9] hover:empty:before:text-[#8c2522]/80 focus:empty:before:text-[#8c2522]/80 empty:before:font-serif empty:before:italic empty:before:text-xs flex items-center justify-center"
+              style={{
+                bottom: '8px',
+                height: `${marginPositionBottom - 16}px`,
+                left: `${marginSide !== 'right' ? marginPositionLeft + 24 : 48}px`,
+                right: `${marginSide !== 'left' ? marginPositionRight + 24 : 48}px`,
+                fontFamily: 'var(--font-serif), serif',
+                textAlign: 'center',
+                opacity: 0.8
+              }}
+            />
           )}
 
           {/* Scribe Guideline Margin Line */}
@@ -1928,6 +2132,16 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
               </div>
             );
           })}
+
+          {/* Draggable Sticky Notes Annotation Overlay */}
+          {pageItem && pageItem.stickyNotes && pageItem.stickyNotes.map(note => (
+            <StickyNoteCard
+              key={note.id}
+              note={note}
+              onUpdate={handleUpdateStickyNote}
+              onDelete={handleDeleteStickyNote}
+            />
+          ))}
         </div>
         </div>
       </div>

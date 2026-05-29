@@ -4,6 +4,7 @@ import {
   Table as TableIcon, Maximize2, Palette, Settings, BookOpen, Sliders 
 } from 'lucide-react';
 import { ImportedDocument, PageSize, PaperStyle, CustomMargin } from '../types';
+import { StickyNotesSectionLayer, StickyNoteCard } from './StickyNoteOverlay';
 
 interface DocumentAnnotatorProps {
   documentItem: ImportedDocument | null;
@@ -63,6 +64,37 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
       ...documentItem,
       ...updates
     });
+  };
+
+  const handleAddStickyNote = () => {
+    if (!documentItem) return;
+    const currentNotes = documentItem.stickyNotes || [];
+    const newNote = {
+      id: `sticky-${Date.now()}`,
+      text: '',
+      x: 150 + (currentNotes.length * 15),
+      y: 200 + (currentNotes.length * 15),
+      width: 160,
+      height: 160,
+      color: 'bg-[#fef9c3] border-[#fef08a] text-yellow-950',
+      shape: 'square' as const,
+      createdAt: Date.now()
+    };
+    saveDocumentChanges({ stickyNotes: [...currentNotes, newNote] });
+  };
+
+  const handleUpdateStickyNote = (id: string, updates: Partial<any>) => {
+    if (!documentItem) return;
+    const updatedNotes = (documentItem.stickyNotes || []).map(note =>
+      note.id === id ? { ...note, ...updates } : note
+    );
+    saveDocumentChanges({ stickyNotes: updatedNotes });
+  };
+
+  const handleDeleteStickyNote = (id: string) => {
+    if (!documentItem) return;
+    const updatedNotes = (documentItem.stickyNotes || []).filter(note => note.id !== id);
+    saveDocumentChanges({ stickyNotes: updatedNotes });
   };
 
   const addCustomMargin = (type: 'vertical-left' | 'vertical-right' | 'horizontal-top' | 'horizontal-bottom') => {
@@ -572,6 +604,20 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
             </button>
           </div>
 
+          {/* Sticky Notes Button */}
+          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
+            <button
+              type="button"
+              onClick={handleAddStickyNote}
+              disabled={!documentItem}
+              className="flex items-center gap-1 p-1 px-2 pb-1.5 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/25 rounded shadow-xs text-[11px] font-semibold cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Add customizable Sticky Note annotation onto this document"
+            >
+              <span className="text-amber-700">📌</span>
+              <span>Add Sticky Note</span>
+            </button>
+          </div>
+
           {/* Floated Scribe Guidelines Formatting Panel */}
           {hasMargin && showMarginStyles && (
             <div className="absolute top-10 right-0 z-50 w-72 rounded-md border border-[#ebdcb9] bg-white p-4 shadow-lg text-xs flex flex-col gap-3 font-serif max-h-[420px] overflow-y-auto">
@@ -1069,6 +1115,16 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
             onTouchEnd={stopDrawing}
             className="absolute inset-0 w-full h-full z-20 cursor-crosshair select-none"
           />
+
+          {/* Draggable Sticky Notes Annotation Overlay */}
+          {documentItem && documentItem.stickyNotes && documentItem.stickyNotes.map(note => (
+            <StickyNoteCard
+              key={note.id}
+              note={note}
+              onUpdate={handleUpdateStickyNote}
+              onDelete={handleDeleteStickyNote}
+            />
+          ))}
         </div>
         </div>
       </div>

@@ -242,7 +242,7 @@ export default function Sidebar({
           <div className="flex items-center gap-3">
             <span className="text-xl">💼</span>
             <div>
-              <h2 className="text-base font-extrabold text-[#3e2723] leading-none uppercase tracking-wider">CA Professional Notes Scriptorium</h2>
+              <h2 className="text-base font-extrabold text-[#3e2723] leading-none uppercase tracking-wider">CA Professional Notes Vintage Workspace</h2>
               <p className="text-[10px] text-[#8c2522] uppercase tracking-wider mt-1 font-extrabold font-mono">Subject-Wise Folders & Ledger Chapter Explorer</p>
             </div>
           </div>

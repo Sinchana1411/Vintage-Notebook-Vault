@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Notepaper, PageSize, PaperStyle, TableData, ShapeElement, CustomMargin } from '../types';
 import { colorClassMap } from './TextNotesSection';
+import { StickyNotesSectionLayer, StickyNoteCard } from './StickyNoteOverlay';
 
 interface HandwrittenSectionProps {
   pageItem: Notepaper | null;
@@ -81,6 +82,37 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
       ...pageItem,
       ...updates
     });
+  };
+
+  const handleAddStickyNote = () => {
+    if (!pageItem) return;
+    const currentNotes = pageItem.stickyNotes || [];
+    const newNote = {
+      id: `sticky-${Date.now()}`,
+      text: '',
+      x: 150 + (currentNotes.length * 15),
+      y: 200 + (currentNotes.length * 15),
+      width: 160,
+      height: 160,
+      color: 'bg-[#fef9c3] border-[#fef08a] text-yellow-950',
+      shape: 'square' as const,
+      createdAt: Date.now()
+    };
+    savePageChanges({ stickyNotes: [...currentNotes, newNote] });
+  };
+
+  const handleUpdateStickyNote = (id: string, updates: Partial<any>) => {
+    if (!pageItem) return;
+    const updatedNotes = (pageItem.stickyNotes || []).map(note =>
+      note.id === id ? { ...note, ...updates } : note
+    );
+    savePageChanges({ stickyNotes: updatedNotes });
+  };
+
+  const handleDeleteStickyNote = (id: string) => {
+    if (!pageItem) return;
+    const updatedNotes = (pageItem.stickyNotes || []).filter(note => note.id !== id);
+    savePageChanges({ stickyNotes: updatedNotes });
   };
 
   const addCustomMargin = (type: 'vertical-left' | 'vertical-right' | 'horizontal-top' | 'horizontal-bottom') => {
@@ -649,6 +681,20 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
               title="Reset Zoom"
             >
               Reset
+            </button>
+          </div>
+
+          {/* Sticky Notes Button */}
+          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
+            <button
+              type="button"
+              onClick={handleAddStickyNote}
+              disabled={!pageItem}
+              className="flex items-center gap-1 p-1 px-2 pb-1.5 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/25 rounded shadow-xs text-[11px] font-semibold cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Add customizable Sticky Note onto this note page"
+            >
+              <span className="text-amber-700">📌</span>
+              <span>Add Sticky Note</span>
             </button>
           </div>
 
@@ -1310,6 +1356,16 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
             onTouchEnd={stopDrawing}
             className="absolute inset-0 w-full h-full z-20 cursor-crosshair select-none"
           />
+
+          {/* Draggable Sticky Notes Annotation Overlay */}
+          {pageItem && pageItem.stickyNotes && pageItem.stickyNotes.map(note => (
+            <StickyNoteCard
+              key={note.id}
+              note={note}
+              onUpdate={handleUpdateStickyNote}
+              onDelete={handleDeleteStickyNote}
+            />
+          ))}
         </div>
         </div>
       </div>
