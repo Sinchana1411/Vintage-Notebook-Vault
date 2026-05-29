@@ -131,6 +131,7 @@ export default function CabinetDashboard({
 
   // Compile notebooks
   const notebooksForSelectedFolder = workspace.notebooks.filter(n => n.folderId === selectedFolderId);
+  const docsInActiveFolder = workspace.documents.filter(d => d.folderId === selectedFolderId);
 
   // Compile loose root notebooks
   const rootNotebooks = workspace.notebooks.filter(n => !n.folderId);
@@ -442,16 +443,18 @@ export default function CabinetDashboard({
               {/* Wooden Bookshelf Layout */}
               <div className="bg-[#4a2e1d] rounded shadow-2xl p-6 relative overflow-hidden">
                 <div className="absolute top-2 right-3 flex gap-2">
-                  <button
-                    onClick={() => {
-                      setNewBookFolderId(selectedFolderId);
-                      setShowNewBookModal(true);
-                    }}
-                    className="flex items-center gap-1 bg-[#8c2522] hover:bg-[#a32e2a] px-3 py-1 text-xs rounded transition-colors text-white font-sans shadow"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Craft Notebook Inside</span>
-                  </button>
+                  {activeFolder?.section !== 'documents' && (
+                    <button
+                      onClick={() => {
+                        setNewBookFolderId(selectedFolderId);
+                        setShowNewBookModal(true);
+                      }}
+                      className="flex items-center gap-1 bg-[#8c2522] hover:bg-[#a32e2a] px-3 py-1 text-xs rounded transition-colors text-white font-sans shadow"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Craft Notebook Inside</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       if (activeFolder) {
@@ -467,68 +470,102 @@ export default function CabinetDashboard({
                 </div>
 
                 <h3 className="text-xs font-bold font-sans text-amber-100/70 uppercase tracking-widest mb-6">
-                  📚 SHELF OF VOLUMES INSIDE DRAWER
+                  {activeFolder?.section === 'documents' ? '📋 DOCUMENTS & FILES INSIDE PARCHED DRAWER' : '📚 SHELF OF VOLUMES INSIDE DRAWER'}
                 </h3>
 
-                {/* Notebooks loop */}
-                {notebooksForSelectedFolder.length === 0 ? (
-                  <div className="py-12 text-center rounded border-2 border-dashed border-amber-900/30 bg-[#352013]">
-                    <p className="text-amber-100/60 text-sm">No notebooks crafted in this cabinet pocket yet.</p>
-                    <p className="text-stone-400 text-xs mt-1">Scribe a notebook volume by clicking the creator button above.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 pt-2 pb-6 border-b-8 border-[#301c0f] shadow-inner relative z-10">
-                    {notebooksForSelectedFolder.map(nb => {
-                      const isSelected = selectedNotebookId === nb.id;
-                      return (
-                        <div 
-                          key={nb.id}
-                          className="flex flex-col items-center cursor-pointer group relative"
-                          onClick={() => setSelectedNotebookId(nb.id)}
+                {activeFolder?.section === 'documents' ? (
+                  /* Documents pouch viewer */
+                  docsInActiveFolder.length === 0 ? (
+                    <div className="py-12 text-center rounded border-2 border-dashed border-amber-900/30 bg-[#352013]">
+                      <p className="text-amber-100/60 text-sm">No documents imported in this cabinet pouch yet.</p>
+                      <p className="text-stone-400 text-xs mt-1">Upload a PDF or image inside this folder via the sidebar to view and annotate.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 pt-2 pb-6 border-b-8 border-[#301c0f] shadow-inner relative z-10">
+                      {docsInActiveFolder.map(doc => (
+                        <div
+                          key={doc.id}
+                          className="flex flex-col items-center cursor-pointer group"
+                          onClick={() => {
+                            onSelectItem(doc.id, 'document');
+                            onSelectSection('documents');
+                          }}
                         >
-                          {/* Book cover rendering widget */}
-                          <div 
-                            className={`w-28 h-36 rounded-r-lg border-l-4 shadow-lg group-hover:shadow-2xl transition-all duration-300 relative flex flex-col justify-between p-3 overflow-hidden transform group-hover:-translate-y-2 ${
-                              isSelected ? 'ring-4 ring-amber-400 rotate-1' : ''
-                            }`}
-                            style={{ 
-                              backgroundColor: nb.coverColor || '#8c2522',
-                              borderLeftColor: 'rgba(0,0,0,0.45)',
-                              boxShadow: 'inset 4px 0 10px rgba(0,0,0,0.2), 0 6px 12px rgba(0,0,0,0.3)'
-                            }}
-                          >
-                            {/* Texture styling overlay */}
-                            <div className={`${coverStyleGradients[nb.coverStyle || 'leather']} absolute inset-0`} />
-                            <div className={coverTextures[nb.coverStyle || 'leather']} />
-
-                            {/* Label card options */}
-                            <div className={`mx-auto bg-amber-50/95 text-stone-800 rounded px-1.5 py-1 text-center font-serif text-[9px] leading-snug font-bold border-b border-[#a27e3d] shadow ${
-                              nb.coverLabel === 'brass_plate' ? 'border-2 border-stone-400 bg-stone-100 text-stone-900 rounded-sm py-0.5' : ''
-                            } ${
-                              nb.coverLabel === 'vintage' ? 'border border-[#8c2522] text-[#8c2522] italic' : ''
-                            } ${
-                              nb.coverLabel === 'minimal' ? 'border-0 bg-transparent text-white drop-shadow-md text-[10px]' : ''
-                            }`}>
-                              <span className="line-clamp-3">{nb.name}</span>
-                            </div>
-
-                            {/* Bookmark ribbon */}
-                            <div className="w-2 h-8 bg-red-600/80 rounded-b absolute bottom-0 right-3 shadow-md" />
-
-                            <div className="flex justify-between items-center text-[7px] text-white/50 select-none font-sans mt-auto">
-                              <span>Modified: {new Date(nb.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
+                          <div className="w-24 h-32 bg-[#faf4eb] rounded border border-amber-900/30 shadow-md group-hover:shadow-2xl transition-all duration-300 relative flex flex-col justify-between p-2.5 overflow-hidden transform group-hover:-translate-y-2">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-amber-50/10 to-amber-100/30 pointer-events-none" />
+                            <FileText className="h-8 w-8 text-[#8c2522] mx-auto mt-4" />
+                            <div className="text-[8px] bg-[#8c2522]/10 text-[#8c2522] rounded px-1 py-0.5 text-center font-mono mt-auto uppercase">
+                              {doc.fileType} FILE
                             </div>
                           </div>
-
-                          <div className="mt-2 text-center w-full">
-                            <span className="block text-xs font-bold text-amber-50 group-hover:text-amber-300 truncate">
-                              {nb.name}
-                            </span>
-                          </div>
+                          <span className="text-[11px] font-bold text-amber-50 mt-2 text-center truncate w-full group-hover:text-amber-300">
+                            {doc.title}
+                          </span>
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  /* Notebooks loop */
+                  notebooksForSelectedFolder.length === 0 ? (
+                    <div className="py-12 text-center rounded border-2 border-dashed border-amber-900/30 bg-[#352013]">
+                      <p className="text-amber-100/60 text-sm">No notebooks crafted in this cabinet pocket yet.</p>
+                      <p className="text-stone-400 text-xs mt-1">Scribe a notebook volume by clicking the creator button above.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 pt-2 pb-6 border-b-8 border-[#301c0f] shadow-inner relative z-10">
+                      {notebooksForSelectedFolder.map(nb => {
+                        const isSelected = selectedNotebookId === nb.id;
+                        return (
+                          <div 
+                            key={nb.id}
+                            className="flex flex-col items-center cursor-pointer group relative"
+                            onClick={() => setSelectedNotebookId(nb.id)}
+                          >
+                            {/* Book cover rendering widget */}
+                            <div 
+                              className={`w-28 h-36 rounded-r-lg border-l-4 shadow-lg group-hover:shadow-2xl transition-all duration-300 relative flex flex-col justify-between p-3 overflow-hidden transform group-hover:-translate-y-2 ${
+                                isSelected ? 'ring-4 ring-amber-400 rotate-1' : ''
+                              }`}
+                              style={{ 
+                                backgroundColor: nb.coverColor || '#8c2522',
+                                borderLeftColor: 'rgba(0,0,0,0.45)',
+                                boxShadow: 'inset 4px 0 10px rgba(0,0,0,0.2), 0 6px 12px rgba(0,0,0,0.3)'
+                              }}
+                            >
+                              {/* Texture styling overlay */}
+                              <div className={`${coverStyleGradients[nb.coverStyle || 'leather']} absolute inset-0`} />
+                              <div className={coverTextures[nb.coverStyle || 'leather']} />
+
+                              {/* Label card options */}
+                              <div className={`mx-auto bg-amber-50/95 text-stone-800 rounded px-1.5 py-1 text-center font-serif text-[9px] leading-snug font-bold border-b border-[#a27e3d] shadow ${
+                                nb.coverLabel === 'brass_plate' ? 'border-2 border-stone-400 bg-stone-100 text-[#333] rounded-sm py-0.5 font-sans font-bold shadow-sm' : ''
+                              } ${
+                                nb.coverLabel === 'vintage' ? 'border border-[#8c2522] text-[#8c2522] italic' : ''
+                              } ${
+                                nb.coverLabel === 'minimal' ? 'border-0 bg-transparent text-white drop-shadow-md text-[10px]' : ''
+                              }`}>
+                                <span className="line-clamp-3">{nb.name}</span>
+                              </div>
+
+                              {/* Bookmark ribbon */}
+                              <div className="w-2 h-8 bg-red-600/80 rounded-b absolute bottom-0 right-3 shadow-md" />
+
+                              <div className="flex justify-between items-center text-[7px] text-white/50 select-none font-sans mt-auto">
+                                <span>Modified: {new Date(nb.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
+                              </div>
+                            </div>
+
+                            <div className="mt-2 text-center w-full">
+                              <span className="block text-xs font-bold text-amber-50 group-hover:text-amber-300 truncate">
+                                {nb.name}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
                 )}
                 
                 {/* Wood ledge shadowing */}

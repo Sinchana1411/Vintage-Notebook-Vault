@@ -308,23 +308,28 @@ export default function Sidebar({
                         </button>
                       </div>
                       <h4 className="font-extrabold text-[#3e2723] text-sm leading-snug mb-2">{folder.name}</h4>
-                      <p className="text-[11px] text-[#5c4033] font-mono">
-                        Contains {folderNotebooks.length} Ledgers {folderDocs.length > 0 ? `& ${folderDocs.length} Docs` : ''} ({totalChaptersCount} chapters)
+                      <p className="text-[11px] text-[#5c4033] font-mono font-medium">
+                        {folder.section === 'documents' 
+                          ? `Contains ${folderDocs.length} Docs` 
+                          : `Contains ${folderNotebooks.length} Ledgers ${folderDocs.length > 0 ? `& ${folderDocs.length} Docs` : ''} (${totalChaptersCount} chapters)`
+                        }
                       </p>
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-[#ebdcb9]/40 flex flex-wrap gap-1.5 leading-none">
-                      <button
-                        onClick={() => {
-                          const name = prompt('Enter ledger title:');
-                          if (name) {
-                            onCreateNotebook(name, folder.id, folder.section === 'handwriting' ? 'handwriting' : 'text', '#8c2522', 'leather', 'brass_plate');
-                          }
-                        }}
-                        className="bg-[#5c4033] text-white hover:bg-[#3e2723] rounded px-2 py-1 text-[10px] font-bold transition-colors cursor-pointer"
-                      >
-                        + Create Ledger
-                      </button>
+                      {folder.section !== 'documents' && (
+                        <button
+                          onClick={() => {
+                            const name = prompt('Enter ledger title:');
+                            if (name) {
+                              onCreateNotebook(name, folder.id, folder.section === 'handwriting' ? 'handwriting' : 'text', '#8c2522', 'leather', 'brass_plate');
+                            }
+                          }}
+                          className="bg-[#5c4033] text-white hover:bg-[#3e2723] rounded px-2 py-1 text-[10px] font-bold transition-colors cursor-pointer"
+                        >
+                          + Create Ledger
+                        </button>
+                      )}
                       {folder.section === 'documents' && (
                         <button
                           onClick={() => {
