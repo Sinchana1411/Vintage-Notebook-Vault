@@ -5,6 +5,11 @@ import {
 } from 'lucide-react';
 import { ImportedDocument, PageSize, PaperStyle, CustomMargin } from '../types';
 import { StickyNotesSectionLayer, StickyNoteCard } from './StickyNoteOverlay';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure pdfjs worker to fetch natively instead of relying on iframe base64
+const ver = pdfjsLib.version || '5.7.284';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ver}/pdf.worker.min.mjs`;
 
 interface DocumentAnnotatorProps {
   documentItem: ImportedDocument | null;
@@ -38,6 +43,14 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   const [customMargins, setCustomMargins] = useState<CustomMargin[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
+  // PDF Viewer Natively rendered states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [numPages, setNumPages] = useState<number>(1);
+  const [pdf, setPdf] = useState<any>(null);
+  const [pdfLoading, setPdfLoading] = useState<boolean>(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
   // Load state from active document item
   useEffect(() => {
     if (documentItem) {
@@ -54,9 +67,105 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
       setMarginStyle(documentItem.marginStyle || 'solid');
       setMarginSide(documentItem.marginSide || 'left');
       setCustomMargins(documentItem.customMargins || []);
-      loadCanvasAnnotation();
+      setCurrentPage(1);
     }
   }, [documentItem?.id]);
+
+  // Load PDF document on change
+  useEffect(() => {
+    if (documentItem?.fileType !== 'pdf' || !documentItem.fileUrl) {
+      setPdf(null);
+      setNumPages(1);
+      return;
+    }
+
+    let active = true;
+    const loadPDF = async () => {
+      setPdfLoading(true);
+      setPdfError(null);
+      try {
+        const fileUrl = documentItem.fileUrl;
+        const base64Data = fileUrl.includes(',') ? fileUrl.split(',')[1] : fileUrl;
+        const binaryString = window.atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const loadingTask = pdfjsLib.getDocument({ data: bytes });
+        const loadedPdf = await loadingTask.promise;
+        if (active) {
+          setPdf(loadedPdf);
+          setNumPages(loadedPdf.numPages);
+        }
+      } catch (err: any) {
+        console.error("PDF.js loading error:", err);
+        if (active) {
+          setPdfError(err.message || "Failed to load PDF document.");
+        }
+      } finally {
+        if (active) setPdfLoading(false);
+      }
+    };
+
+    loadPDF();
+    return () => {
+      active = false;
+    };
+  }, [documentItem?.id, documentItem?.fileUrl]);
+
+  // Render current PDF page onto background canvas
+  useEffect(() => {
+    if (!pdf || documentItem?.fileType !== 'pdf') return;
+    let active = true;
+    let renderTask: any = null;
+
+    const renderPage = async () => {
+      try {
+        const page = await pdf.getPage(currentPage);
+        if (!active) return;
+
+        const canvas = pdfCanvasRef.current;
+        if (!canvas) return;
+
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        // Fit page to A4 or Letter sheet width
+        const initialViewport = page.getViewport({ scale: 1.0 });
+        const desiredWidth = 720;
+        const scaleVal = desiredWidth / initialViewport.width;
+        const viewport = page.getViewport({ scale: scaleVal });
+
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport
+        };
+        renderTask = page.render(renderContext);
+        await renderTask.promise;
+      } catch (err) {
+        console.error("PDF page rendering error:", err);
+      }
+    };
+
+    renderPage();
+    return () => {
+      active = false;
+      if (renderTask) {
+        renderTask.cancel();
+      }
+    };
+  }, [pdf, currentPage, documentItem?.fileType]);
+
+  useEffect(() => {
+    loadCanvasAnnotation();
+  }, [documentItem?.id, currentPage]);
 
   const saveDocumentChanges = (updates: Partial<ImportedDocument>) => {
     if (!documentItem) return;
@@ -178,9 +287,14 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (documentItem?.annotations) {
+    
+    // Support per-page drawing map, gracefully falling back to page 1 annotations
+    const pageAnns = (documentItem as any)?.pageAnnotations || {};
+    const annotationSrc = pageAnns[currentPage] || (currentPage === 1 ? documentItem?.annotations : '');
+
+    if (annotationSrc) {
       const img = new Image();
-      img.src = documentItem.annotations;
+      img.src = annotationSrc;
       img.onload = () => {
         ctx.drawImage(img, 0, 0);
       };
@@ -288,9 +402,16 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
     const canvas = canvasRef.current;
     if (!canvas || !documentItem) return;
     const dataUrl = canvas.toDataURL();
+    
+    const pageAnns = (documentItem as any)?.pageAnnotations || {};
+    const updatedPageAnns = {
+      ...pageAnns,
+      [currentPage]: dataUrl
+    };
+
     onUpdateDocument({
       ...documentItem,
-      annotations: dataUrl,
+      annotations: currentPage === 1 ? dataUrl : (documentItem.annotations || ''),
       pageSize,
       paperStyle,
       hasMargin,
@@ -302,7 +423,8 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
       marginPositionBottom,
       marginStyle,
       marginSide,
-      hasHorizontalMargin
+      hasHorizontalMargin,
+      ...({ pageAnnotations: updatedPageAnns } as any)
     });
   };
 
@@ -312,9 +434,17 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const pageAnns = (documentItem as any)?.pageAnnotations || {};
+    const updatedPageAnns = {
+      ...pageAnns,
+      [currentPage]: ''
+    };
+
     onUpdateDocument({
       ...documentItem,
-      annotations: '',
+      annotations: currentPage === 1 ? '' : (documentItem.annotations || ''),
+      ...({ pageAnnotations: updatedPageAnns } as any)
     });
   };
 
@@ -624,6 +754,34 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
               Reset
             </button>
           </div>
+
+          {/* PDF Page/Leaf Navigator */}
+          {documentItem?.fileType === 'pdf' && numPages > 1 && (
+            <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-3 text-xs select-none">
+              <span className="text-[10px] font-bold text-[#5c4033] uppercase font-mono">Leaf:</span>
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className="p-1 rounded bg-[#faf4eb] hover:bg-[#ebdcb9] border border-[#ebdcb9]/60 font-bold hover:scale-105 active:scale-95 transition-all w-6 h-6 flex items-center justify-center text-xs text-[#5c4033] cursor-pointer disabled:opacity-40"
+                title="Scribe Back Leaf"
+              >
+                ◀
+              </button>
+              <span className="font-mono text-[11px] text-[#5c4033] min-w-[50px] text-center font-bold">
+                {currentPage} of {numPages}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage >= numPages}
+                onClick={() => setCurrentPage(prev => Math.min(numPages, prev + 1))}
+                className="p-1 rounded bg-[#faf4eb] hover:bg-[#ebdcb9] border border-[#ebdcb9]/60 font-bold hover:scale-105 active:scale-95 transition-all w-6 h-6 flex items-center justify-center text-xs text-[#5c4033] cursor-pointer disabled:opacity-40"
+                title="Scribe Forward Leaf"
+              >
+                ▶
+              </button>
+            </div>
+          )}
 
           {/* Sticky Notes Button */}
           <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
@@ -1121,12 +1279,24 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           {/* Content layer depending on file type */}
           <div className="relative z-10 flex-1 text-sm text-[#333] leading-relaxed select-text font-serif">
             {documentItem.fileType === 'pdf' ? (
-              <div className="w-full h-[750px] bg-stone-100 rounded border border-stone-300 relative z-10 overflow-hidden select-none pointer-events-none">
-                <iframe
-                  src={`${documentItem.fileUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                  title={documentItem.title}
-                  className="w-full h-full rounded border-none pointer-events-none select-none"
-                />
+              <div className="w-full relative z-10 flex flex-col items-center select-none pointer-events-none">
+                {pdfLoading && (
+                  <div className="flex flex-col items-center justify-center py-12 text-stone-600 font-sans w-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8c2522] mb-3"></div>
+                    <p className="text-xs font-bold uppercase tracking-wider">Unrolling Ancient Manuscript Scroll...</p>
+                  </div>
+                )}
+                {pdfError && (
+                  <div className="p-6 text-center text-[#8c2522] bg-red-50 border border-red-200 rounded font-sans w-full">
+                    <p className="font-bold">Scribe Decryption Error</p>
+                    <p className="text-xs mt-1">{pdfError}</p>
+                  </div>
+                )}
+                {!pdfLoading && !pdfError && (
+                  <div className="w-full flex justify-center py-2 bg-transparent">
+                    <canvas ref={pdfCanvasRef} className="max-w-full h-auto shadow-sm rounded-sm" />
+                  </div>
+                )}
               </div>
             ) : documentItem.fileType === 'txt' ? (
               <pre className="whitespace-pre-wrap font-serif text-[15px] italic text-[#3e2723]/90 leading-8">
