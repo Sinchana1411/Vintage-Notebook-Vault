@@ -26,7 +26,7 @@ interface SidebarProps {
   ) => void;
   onCreateChapter: (name: string, notebookId: string) => void;
   onCreateNotepaper: (title: string, chapterId: string) => void;
-  onImportDocument: (title: string, content: string, type: 'txt' | 'image', folderId: string | null) => void;
+  onImportDocument: (title: string, content: string, type: 'txt' | 'image' | 'pdf', folderId: string | null) => void;
   onDeleteNode: (id: string, type: 'folder' | 'notebook' | 'chapter' | 'page' | 'document') => void;
   sidebarWidth: number;
 }
@@ -1024,38 +1024,56 @@ export default function Sidebar({
       {showImportModal && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 px-3">
           <div className="w-full max-w-sm rounded-sm border border-[#ebdcb9] bg-[#fdfbf7] p-4 shadow-xl">
-            <h3 className="font-display text-lg font-bold text-[#8c2522] border-b border-[#ebdcb9] pb-2 mb-3">Load Device Document</h3>
+            <h3 className="font-display text-lg font-bold text-[#8c2522] border-b border-[#ebdcb9] pb-2 mb-3">Import PDF Document</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-[10px] font-bold text-[#5c4033] uppercase">Document Title</label>
-                <input
-                  type="text"
-                  placeholder="E.g. Philosophy of Seneca"
-                  value={quickImportTitle}
-                  onChange={e => setQuickImportTitle(e.target.value)}
-                  className="mt-1 w-full rounded-xs border border-[#ebdcb9] bg-white p-2 text-xs outline-none focus:border-[#8c2522]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-[#5c4033] uppercase">Paste Text Transcript / Book Excerpt</label>
-                <textarea
-                  rows={4}
-                  placeholder="Paste manual text to import and annotate..."
-                  value={quickImportText}
-                  onChange={e => setQuickImportText(e.target.value)}
-                  className="mt-1 w-full rounded-xs border border-[#ebdcb9] bg-white p-2 text-xs outline-none focus:border-[#8c2522] resize-none"
-                />
-              </div>
-
-              <div className="border border-dashed border-[#ebdcb9] p-3 text-center bg-[#fcf8f2] rounded">
-                <p className="text-[11px] text-[#5c4033]">Or upload image / document directly via the workbench once file context structure is prepared.</p>
+                <label className="block text-[10px] font-bold text-[#5c4033] uppercase">Select PDF Document</label>
+                <div 
+                  className="mt-1 border-2 border-dashed border-[#ebdcb9] p-6 text-center bg-[#fcf8f2] rounded hover:bg-[#ebdcb9]/15 transition-all cursor-pointer relative"
+                >
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const file = e.target.files[0];
+                        if (file.type !== "application/pdf" && file.name.slice(-4).toLowerCase() !== '.pdf') {
+                          alert("Only standard PDF documents are allowed.");
+                          return;
+                        }
+                        setQuickImportTitle(file.name);
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          if (event.target?.result) {
+                            setQuickImportText(event.target.result as string);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div className="flex flex-col items-center gap-1.5 pointer-events-none">
+                    <span className="text-2xl">📄</span>
+                    <span className="text-xs font-bold text-[#3e2723]">
+                      {quickImportTitle ? quickImportTitle : "Click or Drag PDF file here"}
+                    </span>
+                    <span className="text-[10px] text-[#8c2522] uppercase tracking-wider font-extrabold font-mono">
+                      Strictly .pdf format only
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-5 flex justify-end gap-2">
               <button
-                onClick={() => setShowImportModal(false)}
+                onClick={() => {
+                  setQuickImportTitle('');
+                  setQuickImportText('');
+                  setShowImportModal(false);
+                }}
                 className="rounded-xs border border-[#ebdcb9] px-3 py-1.5 text-xs text-[#5c4033]"
               >
                 Cancel
@@ -1063,17 +1081,18 @@ export default function Sidebar({
               <button
                 onClick={() => {
                   if (quickImportTitle && quickImportText) {
-                    onImportDocument(quickImportTitle, quickImportText, 'txt', selectedFolderForImport);
+                    onImportDocument(quickImportTitle, quickImportText, 'pdf', selectedFolderForImport);
                     setQuickImportTitle('');
                     setQuickImportText('');
                     setShowImportModal(false);
                   } else {
-                    alert("Please provide both a Title and Text content for manual annotation layout.");
+                    alert("Please select a valid PDF file to import.");
                   }
                 }}
-                className="rounded-xs bg-[#8c2522] px-3 py-1.5 text-xs text-[#fdfbf7]"
+                disabled={!quickImportText}
+                className="rounded-xs bg-[#8c2522] px-3 py-1.5 text-xs text-[#fdfbf7] disabled:opacity-50"
               >
-                Import Transcript
+                Import PDF Document
               </button>
             </div>
           </div>

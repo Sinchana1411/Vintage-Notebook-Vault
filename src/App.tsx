@@ -184,7 +184,7 @@ export default function App() {
     setActiveItemType('page');
   };
 
-  const handleImportDocument = (title: string, content: string, type: 'txt' | 'image', folderId: string | null) => {
+  const handleImportDocument = (title: string, content: string, type: 'txt' | 'image' | 'pdf', folderId: string | null) => {
     const newDoc: ImportedDocument = {
       id: `doc-${Date.now()}`,
       folderId,

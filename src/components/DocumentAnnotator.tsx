@@ -318,36 +318,57 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
     });
   };
 
-  // Convert loaded device image/pdf upload to view
+  // Convert loaded device pdf upload to view
   const handleLocalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !documentItem) return;
     const file = e.target.files[0];
     const reader = new FileReader();
 
-    if (file.type.startsWith('image/')) {
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          onUpdateDocument({
-            ...documentItem,
-            fileType: 'image',
-            fileUrl: event.target.result as string,
-            title: file.name
-          });
-        }
-      };
-      reader.readAsDataURL(file);
-    } else {
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          onUpdateDocument({
-            ...documentItem,
-            fileType: 'txt',
-            fileUrl: event.target.result as string,
-            title: file.name
-          });
-        }
-      };
-      reader.readAsText(file);
+    if (file.type !== "application/pdf" && file.name.slice(-4).toLowerCase() !== '.pdf') {
+      alert("Please upload standard document files strictly in PDF format.");
+      return;
+    }
+
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        onUpdateDocument({
+          ...documentItem,
+          fileType: 'pdf',
+          fileUrl: event.target.result as string,
+          title: file.name
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const exportToPDF = async () => {
+    const element = document.getElementById('scroll-paper-body');
+    if (!element || !documentItem) return;
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(element, {
+        scale: 2, // higher scale for crisp high-res layout
+        useCORS: true,
+        backgroundColor: '#fdfbf7', // vintage paper background
+      });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      const sanitisedTitle = documentItem.title.replace(/\.[^/.]+$/, ""); // strip extension
+      pdf.save(`${sanitisedTitle || 'document'}.pdf`);
+    } catch (error) {
+      console.error('Failed to export PDF: ', error);
+      alert('Could not export to PDF. Please try again.');
     }
   };
 
@@ -358,7 +379,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           <BookOpen className="mx-auto h-12 w-12 text-[#ebdcb9] mb-4" />
           <h2 className="font-display text-xl font-bold text-[#3e2723] mb-2">No Document Selected</h2>
           <p className="text-xs text-[#5c4033] leading-relaxed mb-4">
-            Select an annotated book draft from your Literary Cabinet, or import a text sheet to begin scribing directly onto the parchment margins.
+            Select an annotated book draft from your Literary Cabinet, or import a PDF document to begin scribing directly onto the parchment margins.
           </p>
         </div>
       </div>
@@ -615,6 +636,20 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
             >
               <span className="text-amber-700">📌</span>
               <span>Add Sticky Note</span>
+            </button>
+          </div>
+
+          {/* Export to PDF Button */}
+          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
+            <button
+              type="button"
+              onClick={exportToPDF}
+              disabled={!documentItem}
+              className="flex items-center gap-1.5 p-1 px-2.5 pb-1.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Export this annotated document strictly in PDF format"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export PDF</span>
             </button>
           </div>
 
@@ -886,11 +921,11 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           {/* Import file device btn */}
           <label className="flex items-center gap-1.5 rounded-sm bg-[#5c4033] px-3 py-1.5 text-xs font-bold text-[#fdfbf7] cursor-pointer hover:bg-[#3e2723]">
             <Upload className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Replace File</span>
+            <span className="hidden lg:inline">Replace PDF</span>
             <input
               type="file"
               onChange={handleLocalFileUpload}
-              accept="text/plain,image/*"
+              accept="application/pdf"
               className="hidden"
             />
           </label>
@@ -1085,7 +1120,15 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
 
           {/* Content layer depending on file type */}
           <div className="relative z-10 flex-1 text-sm text-[#333] leading-relaxed select-text font-serif">
-            {documentItem.fileType === 'txt' ? (
+            {documentItem.fileType === 'pdf' ? (
+              <div className="w-full h-[750px] bg-stone-100 rounded border border-stone-300 relative z-10 overflow-hidden select-none pointer-events-none">
+                <iframe
+                  src={`${documentItem.fileUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                  title={documentItem.title}
+                  className="w-full h-full rounded border-none pointer-events-none select-none"
+                />
+              </div>
+            ) : documentItem.fileType === 'txt' ? (
               <pre className="whitespace-pre-wrap font-serif text-[15px] italic text-[#3e2723]/90 leading-8">
                 {documentItem.fileUrl}
               </pre>

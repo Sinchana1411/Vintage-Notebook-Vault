@@ -115,6 +115,35 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
     savePageChanges({ stickyNotes: updatedNotes });
   };
 
+  const exportToPDF = async () => {
+    const element = document.getElementById('scroll-paper-body');
+    if (!element || !pageItem) return;
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(element, {
+        scale: 2, // crisp quality
+        useCORS: true,
+        backgroundColor: '#fdfbf7', // vintage paper color
+      });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`${pageItem.title || 'untitled-page'}.pdf`);
+    } catch (error) {
+      console.error('Failed to export PDF: ', error);
+      alert('Could not export to PDF. Please try again.');
+    }
+  };
+
   const addCustomMargin = (type: 'vertical-left' | 'vertical-right' | 'horizontal-top' | 'horizontal-bottom') => {
     const newMargin: CustomMargin = {
       id: `custom-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -698,6 +727,20 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
             </button>
           </div>
 
+          {/* Export strictly to PDF */}
+          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
+            <button
+              type="button"
+              onClick={exportToPDF}
+              disabled={!pageItem}
+              className="flex items-center gap-1.5 p-1 px-2.5 pb-1.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Export this page strictly in PDF format"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export PDF</span>
+            </button>
+          </div>
+
           {/* Floated Scribe Guidelines Formatting Panel */}
           {hasMargin && showMarginStyles && (
             <div className="absolute top-10 right-0 z-50 w-72 rounded-md border border-[#ebdcb9] bg-white p-4 shadow-lg text-xs flex flex-col gap-3 font-serif max-h-[420px] overflow-y-auto">
@@ -1004,6 +1047,7 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
       <div className="flex-1 overflow-auto p-6 flex justify-center items-start vintage-scroll">
         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}>
           <div
+            id="scroll-paper-body"
             className={`relative bg-[#fdfbf7] ${sizeClasses[pageSize]} border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 pointer-events-auto ${
               draggingId ? 'select-none cursor-grabbing' : ''
             }`}
