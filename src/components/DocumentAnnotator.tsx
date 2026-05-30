@@ -659,7 +659,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   return (
     <div className="flex flex-1 flex-col bg-[#faf4eb] overflow-hidden font-serif">
       {/* Scrollable Document Area Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e2d6c5] bg-[#fcf8f2] px-6 py-2.5 shadow-2xs">
+      <div className="relative z-30 flex flex-wrap items-center justify-between gap-4 border-b border-[#e2d6c5] bg-[#fcf8f2] px-6 py-2.5 shadow-2xs">
         {/* Tools */}
         <div className="flex items-center gap-1">
           {isPdf && (

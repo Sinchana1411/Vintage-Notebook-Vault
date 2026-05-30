@@ -593,7 +593,7 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
   return (
     <div className="flex flex-1 flex-col bg-[#faf4eb] overflow-hidden font-serif">
       {/* RICH TEXT RIBBON TOOLBAR & CONTROLS */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 border-b border-[#e2d6c5] bg-[#fcf8f2] px-6 py-2 shadow-2xs">
+      <div className="relative z-30 flex flex-wrap items-center justify-between gap-y-2 border-b border-[#e2d6c5] bg-[#fcf8f2] px-6 py-2 shadow-2xs">
         
         {/* Style selection */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
