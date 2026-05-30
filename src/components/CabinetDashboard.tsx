@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Folder as FolderIcon, Book, Layers, FileText, PenTool, 
   Search, Plus, Sparkles, Grid, Sliders, ChevronRight, FolderOpen,
@@ -35,6 +35,42 @@ export default function CabinetDashboard({
   onDeleteNode,
   onUpdateWorkspace
 }: CabinetDashboardProps) {
+  // PWA detection & states inside CabinetDashboard
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState<boolean>(false);
+  const [isStandalone, setIsStandalone] = useState<boolean>(
+    typeof window !== 'undefined' && (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true
+    )
+  );
+  const [isInIframe, setIsInIframe] = useState<boolean>(() => {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    const handlePrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+    window.addEventListener('beforeinstallprompt', handlePrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
+  }, []);
+
+  const triggerInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`Prompt outcome: ${outcome}`);
+    setDeferredPrompt(null);
+    setIsInstallable(false);
+  };
+
   const handleAddStickyNote = () => {
     const newNote = {
       id: `sticky-${Date.now()}`,
@@ -751,6 +787,100 @@ export default function CabinetDashboard({
               )}
             </div>
           )}
+
+          {/* PWA Direct Installation & Standalone Tab Status Desk */}
+          <div className="mt-8 rounded-lg border-2 border-[#8c2522]/30 bg-[#fdfbf7] p-6 font-serif shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#ebdcb9] pb-3.5 mb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl select-none">📡</span>
+                <div>
+                  <h4 className="font-display text-sm font-extrabold text-[#8c2522] uppercase tracking-wider">Progressive Web App (PWA) Install Desk</h4>
+                  <p className="text-[10px] text-[#5c4033] uppercase tracking-wider font-mono font-bold">Offline Syncing & Sandboxed Home Screen Engine</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded bg-green-500/15 border border-green-600/30 px-2.5 py-0.5 text-[9px] font-mono font-extrabold text-green-800 uppercase tracking-wider">
+                  <span className="text-green-700 animate-pulse">●</span> Service Worker Active
+                </span>
+                {isStandalone ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 border border-amber-600/30 px-2.5 py-0.5 text-[9px] font-mono font-extrabold text-[#8c2522] uppercase tracking-wider">
+                    🏛️ Standalone App Shell
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded bg-stone-500/10 border border-stone-600/20 px-2.5 py-0.5 text-[9px] font-mono font-extrabold text-stone-700 uppercase tracking-wider">
+                    💻 Standard Browser Tab
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {isInIframe ? (
+              <div className="bg-[#8c2522]/5 border border-[#8c2522]/20 rounded-md p-4 mb-4 text-xs text-[#5c4033] space-y-3">
+                <div className="flex items-center gap-2 text-[#8c2522] font-extrabold uppercase text-[10px] tracking-wide">
+                  <span>⚠️</span>
+                  <span>iFrame Environment Restriction</span>
+                </div>
+                <p className="leading-relaxed">
+                  You are viewing Scriptorium through the <strong>AI Studio Workspace Preview Pane (nested iframe)</strong>. 
+                  Standard web browsers (Chrome, Edge, Safari, Firefox, etc.) explicitly block native PWA installation triggers and hide the address bar install icon when inside sub-frames.
+                </p>
+                <div className="pt-1 flex">
+                  <button
+                    onClick={() => window.open(window.location.origin, '_blank')}
+                    className="inline-flex items-center gap-2 bg-[#8c2522] hover:bg-[#6a1c19] text-white text-[11px] font-bold uppercase tracking-wider px-4.5 py-2.5 rounded shadow-sm hover:shadow-md transition-all cursor-pointer"
+                  >
+                    🚀 Open Standing Tab to Install Scriptorium
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4">
+                {isInstallable ? (
+                  <div className="bg-green-500/5 border border-green-600/20 rounded-md p-4 text-xs text-[#5c4033] space-y-3">
+                    <div className="flex items-center gap-2 text-green-800 font-extrabold uppercase text-[10px] tracking-wide">
+                      <span>✓</span>
+                      <span>Ready to Bind to Device Home Screen</span>
+                    </div>
+                    <p className="leading-relaxed font-serif">
+                      Your current browser window has unlocked full client standalone capabilities! Install Scriptorium right now as a native desktop or mobile application.
+                    </p>
+                    <div className="pt-1">
+                      <button
+                        onClick={triggerInstall}
+                        className="inline-flex items-center gap-2 bg-green-800 hover:bg-green-900 text-white text-[11px] font-bold uppercase tracking-wider px-5 py-2.5 rounded shadow-sm hover:shadow-md transition-all cursor-pointer"
+                      >
+                        📥 Download & Install Scriptorium
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-[#ebdcb9]/20 border border-[#ebdcb9]/65 rounded-md p-4 text-xs text-[#5c4033] space-y-2">
+                    <div className="flex items-center gap-2 text-[#8c2522] font-extrabold uppercase text-[10px] tracking-wide">
+                      <span>💡</span>
+                      <span>How to Install on Mobile & Desktop</span>
+                    </div>
+                    <p className="leading-relaxed font-serif">
+                      Since your browser doesn't trigger the custom automated button, you can install Scriptorium in <strong>1 click</strong> from your browser's native controls:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                      <div className="bg-white/70 p-2.5 rounded border border-[#ebdcb9]/40 space-y-1">
+                        <span className="font-extrabold text-[10px] text-[#8c2522] block uppercase font-sans">Android Chrome</span>
+                        <p className="text-[11px]">Tap the <strong>three dots menu (⋮)</strong> in Chrome and click <strong>"Install app"</strong> or <strong>"Add to Home Screen"</strong>.</p>
+                      </div>
+                      <div className="bg-white/70 p-2.5 rounded border border-[#ebdcb9]/40 space-y-1">
+                        <span className="font-extrabold text-[10px] text-[#8c2522] block uppercase font-sans">iPhone/iPad Safari</span>
+                        <p className="text-[11px]">Tap the <strong>Share button (📤)</strong> at the bottom of Safari and select <strong>"Add to Home Screen"</strong>.</p>
+                      </div>
+                      <div className="bg-white/70 p-2.5 rounded border border-[#ebdcb9]/40 space-y-1">
+                        <span className="font-extrabold text-[10px] text-[#8c2522] block uppercase font-sans">Windows / Mac Chrome</span>
+                        <p className="text-[11px]">Click the <strong>Download icon (⤓)</strong> that appeared in the right part of your browser's URL address bar.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Educational Scriptorium Capacity & Limits Guide Card */}
           <div className="mt-8 rounded-lg border border-[#ebdcb9] bg-[#ebdcb9]/15 p-6 font-serif">
