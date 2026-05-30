@@ -7,6 +7,8 @@
   "display": "standalone",
   "background_color": "#fdfbf7",
   "theme_color": "#8c2522",
+  "orientation": "any",
+  "scope": "/",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -33,6 +35,22 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Scriptorium Desktop Note-taking Ledger"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Scriptorium Mobile Handwritten Leaf"
+    }
+  ],
   "categories": ["productivity", "utilities"],
-  "screenshots": []
+  "prefer_related_applications": false
 }

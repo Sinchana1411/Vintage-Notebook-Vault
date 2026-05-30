@@ -1,21 +1,29 @@
-const CACHE_NAME = 'scriptorium-v1';
+const CACHE_NAME = 'scriptorium-pwa-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
+  '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
   '/icon-192-maskable.png',
-  '/icon-512-maskable.png'
+  '/icon-512-maskable.png',
+  '/screenshot-desktop.png',
+  '/screenshot-mobile.png'
 ];
 
-// Install: precache the App Shell resources
+// Install: precache the App Shell resources robustly
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[Service Worker] Pre-caching offline app shell');
-        return cache.addAll(PRECACHE_ASSETS);
+        console.log('[Service Worker] Pre-caching offline assets');
+        return Promise.allSettled(
+          PRECACHE_ASSETS.map((asset) => {
+            return cache.add(asset)
+              .then(() => console.log(`[Service Worker] Cached asset: ${asset}`))
+              .catch((err) => console.warn(`[Service Worker] Precache failed for ${asset}:`, err));
+          })
+        );
       })
       .then(() => self.skipWaiting())
   );
@@ -37,60 +45,69 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network-first or Stale-While-Revalidate strategy for assets
+// Fetch handler: robust offline compliance for Chrome / Vercel
 self.addEventListener('fetch', (event) => {
+  // Only handle GET requests or requests within our scope
+  if (event.request.method !== 'GET') return;
+
   const requestUrl = new URL(event.request.url);
 
-  // Skip non-GET requests and browser extensions/external APIs
-  if (event.request.method !== 'GET') return;
-  if (!event.request.url.startsWith(self.location.origin)) {
-    // For external static assets like Google Fonts or jsdelivr CDN (pdf.js workers, fonts), cache them!
-    if (event.request.url.includes('googleapis.com') || 
-        event.request.url.includes('gstatic.com') ||
-        event.request.url.includes('jsdelivr.net') ||
-        event.request.url.includes('cdnjs.cloudflare.com')) {
-      event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          return fetch(event.request).then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const cacheCopy = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, cacheCopy);
-              });
-            }
-            return networkResponse;
-          }).catch(() => {
-            // Offline fallback
-            return new Response('Offline content unavailable for this third-party resource.');
-          });
+  // 1. Navigation Requests (HTML Pages / Root)
+  // Network first, falling back to cache
+  if (event.request.mode === 'navigate' || requestUrl.pathname === '/' || requestUrl.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseCopy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseCopy));
+          }
+          return networkResponse;
         })
-      );
-    }
+        .catch(() => {
+          console.log('[Service Worker] Navigation request offline, falling back to cache');
+          return caches.match('/')
+            .then((cachedResponse) => cachedResponse || caches.match('/index.html'));
+        })
+    );
     return;
   }
 
-  // Stale-While-Revalidate strategy for index page and local JS/CSS/image assets
-  event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.match(event.request).then((cachedResponse) => {
-        const fetchPromise = fetch(event.request).then((networkResponse) => {
-          // If response is valid, update the cache
-          if (networkResponse && networkResponse.status === 200) {
-            cache.put(event.request, networkResponse.clone());
-          }
-          return networkResponse;
-        }).catch((err) => {
-          console.warn('[Service Worker] Fetch failed, returning cache if available:', err);
-          // If we are offline and no cache matches, and it is a document request, return root / index
-          if (event.request.mode === 'navigate') {
-            return cache.match('/');
-          }
-          throw err;
-        });
+  // 2. Static Assets (JS, CSS, PNG, JPEG, SVG, WOFF, etc.)
+  // Cache first, falling back to network
+  const isStaticAsset = 
+    requestUrl.origin === self.location.origin ||
+    event.request.url.includes('googleapis.com') ||
+    event.request.url.includes('gstatic.com') ||
+    event.request.url.includes('jsdelivr.net') ||
+    event.request.url.includes('cdnjs.cloudflare.com');
 
-        return cachedResponse || fetchPromise;
-      });
-    })
-  );
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse; // Return cache hit immediately
+        }
+
+        // Fetch from network, clone, and cache
+        return fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const responseCopy = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseCopy));
+            }
+            return networkResponse;
+          })
+          .catch((err) => {
+            console.warn('[Service Worker] Asset fetch failed and not cached:', event.request.url, err);
+            // Return dummy offline image or generic response if it's an image
+            if (event.request.destination === 'image') {
+              return caches.match('/icon-192.png');
+            }
+            return new Response('Asset unavailable offline.', { status: 404, statusText: 'Offline' });
+          });
+      })
+    );
+    return;
+  }
 });
