@@ -31,7 +31,7 @@ export interface CustomMargin {
 }
 
 // Layout definitions for pages
-export type PageSize = 'Letter' | 'A4' | 'A5' | 'Pocket' | 'Legal' | 'Letter_Landscape' | 'A4_Landscape' | 'Square_Sm' | 'Square_Lg';
+export type PageSize = 'Portrait' | 'Landscape';
 export type PaperStyle = 'ruled' | 'unruled' | 'grid';
 
 export interface TableCellFormat {
@@ -144,6 +144,8 @@ export interface Notepaper {
   tables?: TableData[];
   charts?: ChartData[];
   shapes?: ShapeElement[];
+  customWidth?: number;
+  customHeight?: number;
   
   // Handwriting/Drawing fields (stored as dataURL or stroke paths for SVG/Canvas rendering)
   drawingsData?: string; // canvas drawings serialized as dataURL (or high quality SVG data)
@@ -173,6 +175,8 @@ export interface ImportedDocument {
   hasHorizontalMargin?: boolean;
   customMargins?: CustomMargin[];
   stickyNotes?: StickyNote[];
+  customWidth?: number;
+  customHeight?: number;
 }
 
 // Top level workspace format

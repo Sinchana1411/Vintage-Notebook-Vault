@@ -18,7 +18,7 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
   const [penSize, setPenSize] = useState<number>(3);
   const [eraserSize, setEraserSize] = useState<number>(25);
   const [paperStyle, setPaperStyle] = useState<PaperStyle>('ruled');
-  const [pageSize, setPageSize] = useState<PageSize>('Letter');
+  const [pageSize, setPageSize] = useState<PageSize>('Portrait');
   const [hasMargin, setHasMargin] = useState<boolean>(true);
   const [marginColor, setMarginColor] = useState<string>('#f87171');
   const [marginPosition, setMarginPosition] = useState<number>(75);
@@ -33,32 +33,56 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
   const [customMargins, setCustomMargins] = useState<CustomMargin[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
+  // Embedded overlays
+  const [localTables, setLocalTables] = useState<TableData[]>([]);
+  const [localShapes, setLocalShapes] = useState<ShapeElement[]>([]);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState<number>(1.0);
 
-  // Embedded overlays
-  const [localTables, setLocalTables] = useState<TableData[]>([]);
-  const [localShapes, setLocalShapes] = useState<ShapeElement[]>([]);
+  // Undo and Page Dimensions maps
+  const [undoHistory, setUndoHistory] = useState<string[]>([]);
+  const [redoHistory, setRedoHistory] = useState<string[]>([]);
+  
+  const sizePixels: Record<PageSize, { width: number; height: number }> = {
+    Portrait: { width: 800, height: 1131 },
+    Landscape: { width: 1131, height: 800 }
+  };
+
+  const pageDimensions: Record<PageSize, { width: number; height: number }> = {
+    Portrait: { width: 850, height: 1131 },
+    Landscape: { width: 1131, height: 850 }
+  };
+
+  const [customWidth, setCustomWidth] = useState<number>(800);
+  const [customHeight, setCustomHeight] = useState<number>(1131);
 
   // Page classes
   const sizeClasses: Record<PageSize, string> = {
-    Letter: 'w-full max-w-[800px] min-h-[1050px]',
-    A4: 'w-full max-w-[760px] min-h-[1080px]',
-    A5: 'w-full max-w-[550px] min-h-[780px]',
-    Pocket: 'w-full max-w-[420px] min-h-[600px]',
-    Legal: 'w-full max-w-[840px] min-h-[1220px]',
-    Letter_Landscape: 'w-full max-w-[1050px] min-h-[750px]',
-    A4_Landscape: 'w-full max-w-[1080px] min-h-[720px]',
-    Square_Sm: 'w-full max-w-[600px] min-h-[600px]',
-    Square_Lg: 'w-full max-w-[800px] min-h-[800px]'
+    Portrait: 'w-full max-w-[800px] min-h-[1131px]',
+    Landscape: 'w-full max-w-[1131px] min-h-[800px]'
+  };
+
+  // Reset undo/redo only when switching pages
+  useEffect(() => {
+    setUndoHistory([]);
+    setRedoHistory([]);
+  }, [pageItem?.id]);
+
+  const mappedPageSize = (val: string): PageSize => {
+    if (val === 'Landscape' || val === 'Letter_Landscape' || val === 'A4_Landscape') {
+      return 'Landscape';
+    }
+    return 'Portrait';
   };
 
   useEffect(() => {
     if (pageItem) {
       setPaperStyle(pageItem.paperStyle);
-      setPageSize(pageItem.pageSize);
+      const mappedSize = mappedPageSize(pageItem.pageSize);
+      setPageSize(mappedSize);
       setHasMargin(pageItem.hasMargin);
       setMarginColor(pageItem.marginColor || '#f87171');
       setMarginPosition(pageItem.marginPosition !== undefined ? pageItem.marginPosition : 75);
@@ -72,9 +96,20 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
       setLocalTables(pageItem.tables || []);
       setLocalShapes(pageItem.shapes || []);
       setCustomMargins(pageItem.customMargins || []);
+
+      // Load custom width and height
+      const sizeDef = sizePixels[mappedSize];
+      setCustomWidth((pageItem as any).customWidth || sizeDef.width);
+      setCustomHeight((pageItem as any).customHeight || sizeDef.height);
+    }
+  }, [pageItem?.id, pageItem?.pageSize, (pageItem as any)?.customWidth, (pageItem as any)?.customHeight]);
+
+  // Robust sync load canvas drawing and scale it neatly on change of layout size or shape
+  useEffect(() => {
+    if (pageItem) {
       loadCanvasDrawings();
     }
-  }, [pageItem?.id]);
+  }, [pageItem?.id, pageSize, customWidth, customHeight, pageItem?.drawingsData]);
 
   const savePageChanges = (updates: Partial<Notepaper>) => {
     if (!pageItem) return;
@@ -229,7 +264,7 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
       const img = new Image();
       img.src = pageItem.drawingsData;
       img.onload = () => {
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       };
     }
   };
@@ -261,6 +296,12 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Save previous drawing state for undo before drawing starts
+    const currentData = pageItem?.drawingsData || '';
+    setUndoHistory(prev => [...prev, currentData]);
+    setRedoHistory([]); // Restores empty redo queue on next user strokes
+
     const { x, y } = getCoordinates(e);
     setIsDrawing(true);
     setLastPos({ x, y });
@@ -401,12 +442,78 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
   const clearCanvasContent = () => {
     const canvas = canvasRef.current;
     if (!canvas || !pageItem) return;
+
+    // Save state for undo before clearing
+    const currentData = pageItem.drawingsData || '';
+    setUndoHistory(prev => [...prev, currentData]);
+    setRedoHistory([]); // Restores empty redo queue on clear
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     onUpdatePage({
       ...pageItem,
       drawingsData: '',
+    });
+  };
+
+  const handleUndo = () => {
+    if (undoHistory.length === 0) return;
+
+    const previousData = undoHistory[undoHistory.length - 1];
+    setUndoHistory(prev => prev.slice(0, -1));
+
+    // Save current state for redo
+    const currentData = pageItem?.drawingsData || '';
+    setRedoHistory(prev => [...prev, currentData]);
+
+    const canvas = canvasRef.current;
+    if (!canvas || !pageItem) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (previousData) {
+      const img = new Image();
+      img.src = previousData;
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+    }
+
+    onUpdatePage({
+      ...pageItem,
+      drawingsData: previousData
+    });
+  };
+
+  const handleRedo = () => {
+    if (redoHistory.length === 0) return;
+
+    const nextData = redoHistory[redoHistory.length - 1];
+    setRedoHistory(prev => prev.slice(0, -1));
+
+    // Save current state for undo before applying redo
+    const currentData = pageItem?.drawingsData || '';
+    setUndoHistory(prev => [...prev, currentData]);
+
+    const canvas = canvasRef.current;
+    if (!canvas || !pageItem) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (nextData) {
+      const img = new Image();
+      img.src = nextData;
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+    }
+
+    onUpdatePage({
+      ...pageItem,
+      drawingsData: nextData
     });
   };
 
@@ -615,28 +722,135 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
         )}
 
         {/* Dynamic Canvas custom settings page styles */}
-        <div className="flex items-center gap-3 text-xs relative">
-          <div className="flex items-center gap-1.5 rounded border border-[#ebdcb9] bg-white px-2 py-1 text-[#5c4033]">
-            <Settings className="h-3.5 w-3.5" />
-            <select
-              value={pageSize}
-              onChange={e => {
-                const s = e.target.value as PageSize;
-                setPageSize(s);
-                if (pageItem) onUpdatePage({ ...pageItem, pageSize: s });
-              }}
-              className="bg-transparent outline-none font-bold"
+        <div className="flex flex-col gap-1.5 text-xs relative select-none">
+          {/* Keep the undo/redo button row ABOVE the page shape changing slot */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={undoHistory.length === 0}
+              className={`flex items-center gap-1.5 rounded px-2.5 py-1 font-bold transition-all cursor-pointer border text-[11px] ${
+                undoHistory.length > 0
+                  ? 'bg-red-50 border-[#8c2522] text-[#8c2522] hover:bg-red-100 shadow-2xs'
+                  : 'bg-[#faf4eb] border-[#ebdcb9]/60 text-[#5c4033]/40 cursor-not-allowed opacity-60'
+              }`}
+              title="Undo last stroke"
             >
-              <option value="Letter">Letter Sheet</option>
-              <option value="A4">A4 Bond</option>
-              <option value="A5">A5 Loose</option>
-              <option value="Pocket">Pocket Ledger</option>
-              <option value="Legal">Legal Size</option>
-              <option value="Letter_Landscape">Landscape Letter</option>
-              <option value="A4_Landscape">Landscape A4</option>
-              <option value="Square_Sm">Square Small (600x600)</option>
-              <option value="Square_Lg">Square Large (800x800)</option>
-            </select>
+              <span className="text-sm">↩</span>
+              <span>Undo Stroke</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleRedo}
+              disabled={redoHistory.length === 0}
+              className={`flex items-center gap-1.5 rounded px-2.5 py-1 font-bold transition-all cursor-pointer border text-[11px] ${
+                redoHistory.length > 0
+                  ? 'bg-red-50 border-[#8c2522] text-[#8c2522] hover:bg-red-100 shadow-2xs'
+                  : 'bg-[#faf4eb] border-[#ebdcb9]/60 text-[#5c4033]/40 cursor-not-allowed opacity-60'
+              }`}
+              title="Redo last stroke"
+            >
+              <span>Redo Stroke</span>
+              <span className="text-sm">↪</span>
+            </button>
+          </div>
+
+          {/* The page shape slot itself */}
+          <div className="flex flex-wrap items-center gap-1.5 rounded border border-[#ebdcb9] bg-white px-2.5 py-1.5 text-[#5c4033]">
+            <div className="flex items-center gap-1">
+              <Settings className="h-3.5 w-3.5" />
+              <select
+                value={pageSize}
+                onChange={e => {
+                  const s = e.target.value as PageSize;
+                  setPageSize(s);
+                  const sizeDef = sizePixels[s] || { width: 800, height: 1131 };
+                  setCustomWidth(sizeDef.width);
+                  setCustomHeight(sizeDef.height);
+                  if (pageItem) {
+                    onUpdatePage({
+                      ...pageItem,
+                      pageSize: s,
+                      customWidth: sizeDef.width,
+                      customHeight: sizeDef.height
+                    } as any);
+                  }
+                }}
+                className="bg-transparent outline-none font-bold"
+              >
+                <option value="Portrait">Portrait (1 : 1.414)</option>
+                <option value="Landscape">Landscape (1.414 : 1)</option>
+              </select>
+            </div>
+
+            {/* Custom Length and Width Sliders */}
+            <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-2 flex-wrap text-[#5c4033]">
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase text-[#8c2522]">Width:</span>
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={customWidth}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    const w = Number(val) || 300;
+                    const h = Math.round(pageSize === 'Portrait' ? w * 1.414 : w / 1.414);
+                    setCustomWidth(w);
+                    setCustomHeight(h);
+                    if (pageItem) onUpdatePage({ ...pageItem, customWidth: w, customHeight: h } as any);
+                  }}
+                  className="w-10 bg-transparent outline-none font-bold font-mono text-center border-b border-[#ebdcb9]/60"
+                  placeholder="Width"
+                />
+                <input
+                  type="range"
+                  min={300}
+                  max={1650}
+                  value={customWidth}
+                  onChange={e => {
+                    const w = Number(e.target.value);
+                    const h = Math.round(pageSize === 'Portrait' ? w * 1.414 : w / 1.414);
+                    setCustomWidth(w);
+                    setCustomHeight(h);
+                    if (pageItem) onUpdatePage({ ...pageItem, customWidth: w, customHeight: h } as any);
+                  }}
+                  className="w-16 accent-[#8c2522] cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 border-l border-[#ebdcb9]/45 pl-1.5">
+                <span className="text-[10px] font-bold uppercase text-[#8c2522]">Length:</span>
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={customHeight}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    const h = Number(val) || 400;
+                    const w = Math.round(pageSize === 'Portrait' ? h / 1.414 : h * 1.414);
+                    setCustomWidth(w);
+                    setCustomHeight(h);
+                    if (pageItem) onUpdatePage({ ...pageItem, customWidth: w, customHeight: h } as any);
+                  }}
+                  className="w-10 bg-transparent outline-none font-bold font-mono text-center border-b border-[#ebdcb9]/60"
+                  placeholder="Length"
+                />
+                <input
+                  type="range"
+                  min={400}
+                  max={2250}
+                  value={customHeight}
+                  onChange={e => {
+                    const h = Number(e.target.value);
+                    const w = Math.round(pageSize === 'Portrait' ? h / 1.414 : h * 1.414);
+                    setCustomWidth(w);
+                    setCustomHeight(h);
+                    if (pageItem) onUpdatePage({ ...pageItem, customWidth: w, customHeight: h } as any);
+                  }}
+                  className="w-16 accent-[#8c2522] cursor-pointer"
+                />
+              </div>
+            </div>
 
             <select
               value={paperStyle}
@@ -680,6 +894,8 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
               </button>
             )}
           </div>
+
+        </div>
 
           {/* Scriptorium Antique Zoom Controls */}
           <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-3 text-xs select-none">
@@ -1004,7 +1220,17 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
           >
             Clear Sheet
           </button>
-        </div>
+
+          {/* Undo Annotations Button */}
+          <button
+            onClick={handleUndo}
+            disabled={undoHistory.length === 0}
+            title="Undo last annotation stroke"
+            className="rounded border border-[#ebdcb9] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb] disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer select-none"
+          >
+            <span className="text-sm">↩</span>
+            <span>Undo Stroke</span>
+          </button>
 
         {/* Feature: inserting shapes & tables into Handwriting workspace */}
         <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-3">
@@ -1048,10 +1274,12 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}>
           <div
             id="scroll-paper-body"
-            className={`relative bg-[#fdfbf7] ${sizeClasses[pageSize]} border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 pointer-events-auto ${
+            className={`relative bg-[#fdfbf7] border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 pointer-events-auto ${
               draggingId ? 'select-none cursor-grabbing' : ''
             }`}
             style={{
+              width: `${customWidth}px`,
+              height: `${customHeight}px`,
               paddingLeft: hasMargin && marginSide !== 'right' ? `${marginPositionLeft + 24}px` : '48px',
               paddingRight: hasMargin && marginSide !== 'left' ? `${marginPositionRight + 24}px` : '48px',
               paddingTop: hasMargin && hasHorizontalMargin ? `${marginPositionTop + 24}px` : '48px',
@@ -1389,8 +1617,8 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
           {/* HAND STYLE CANVAS LAYER */}
           <canvas
             ref={canvasRef}
-            width={850}
-            height={1150}
+            width={customWidth}
+            height={customHeight}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}

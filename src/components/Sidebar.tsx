@@ -832,28 +832,6 @@ export default function Sidebar({
           <span>1000+ Page PDF:</span>
           <span className="text-[#8c2522]">Fully Supported</span>
         </div>
-
-        {/* PWA Direct Link */}
-        <div className="mt-2 pt-2 border-t border-[#ebdcb9]/45 flex flex-col gap-1">
-          <div className="flex items-center justify-between text-[9px] uppercase font-mono font-bold">
-            <span>PWA Offline Mode:</span>
-            <span className="text-green-700 font-extrabold flex items-center gap-1">
-              <span className="animate-pulse">●</span> Active
-            </span>
-          </div>
-          {typeof window !== 'undefined' && window.self !== window.top ? (
-            <button
-              onClick={() => window.open(window.location.origin, '_blank')}
-              className="mt-1.5 w-full text-center bg-[#8c2522] hover:bg-[#6a1c19] text-white text-[9px] font-bold uppercase tracking-wider py-1 rounded cursor-pointer transition-all"
-            >
-              🚀 Open New Tab to Install
-            </button>
-          ) : (
-            <div className="text-[9px] text-[#8c2522] font-semibold text-center mt-0.5">
-              ✓ Run standalone or via browser menu
-            </div>
-          )}
-        </div>
       </div>
 
       {/* RENDER NOTEBOOK ITEM NODES (COMPLETED) */}

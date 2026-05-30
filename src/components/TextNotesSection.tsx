@@ -48,7 +48,7 @@ interface TextNotesSectionProps {
 
 export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSectionProps) {
   const [paperStyle, setPaperStyle] = useState<PaperStyle>('ruled');
-  const [pageSize, setPageSize] = useState<PageSize>('Letter');
+  const [pageSize, setPageSize] = useState<PageSize>('Portrait');
   const [hasMargin, setHasMargin] = useState<boolean>(true);
   const [marginColor, setMarginColor] = useState<string>('#f87171');
   const [marginPosition, setMarginPosition] = useState<number>(75);
@@ -62,6 +62,13 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
   const [showMarginStyles, setShowMarginStyles] = useState<boolean>(false);
   const [customMargins, setCustomMargins] = useState<CustomMargin[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [customWidth, setCustomWidth] = useState<number>(800);
+  const [customHeight, setCustomHeight] = useState<number>(1131);
+
+  const sizePixels: Record<PageSize, { width: number; height: number }> = {
+    Portrait: { width: 800, height: 1131 },
+    Landscape: { width: 1131, height: 800 }
+  };
 
   // Editor states
   const [fontStyle, setFontStyle] = useState<'serif' | 'display' | 'cursive' | 'mono'>('serif');
@@ -98,22 +105,23 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
 
   // Sizing styles
   const sizeClasses: Record<PageSize, string> = {
-    Letter: 'w-full max-w-[800px] min-h-[1050px]',
-    A4: 'w-full max-w-[760px] min-h-[1080px]',
-    A5: 'w-full max-w-[550px] min-h-[780px]',
-    Pocket: 'w-full max-w-[420px] min-h-[600px]',
-    Legal: 'w-full max-w-[840px] min-h-[1220px]',
-    Letter_Landscape: 'w-full max-w-[1050px] min-h-[750px]',
-    A4_Landscape: 'w-full max-w-[1080px] min-h-[720px]',
-    Square_Sm: 'w-full max-w-[600px] min-h-[600px]',
-    Square_Lg: 'w-full max-w-[800px] min-h-[800px]'
+    Portrait: 'w-full max-w-[800px] min-h-[1131px]',
+    Landscape: 'w-full max-w-[1131px] min-h-[800px]'
+  };
+
+  const mappedPageSize = (val: string): PageSize => {
+    if (val === 'Landscape' || val === 'Letter_Landscape' || val === 'A4_Landscape') {
+      return 'Landscape';
+    }
+    return 'Portrait';
   };
 
   // Load page specific data
   useEffect(() => {
     if (pageItem) {
       setPaperStyle(pageItem.paperStyle);
-      setPageSize(pageItem.pageSize);
+      const mappedSize = mappedPageSize(pageItem.pageSize);
+      setPageSize(mappedSize);
       setHasMargin(pageItem.hasMargin);
       setMarginColor(pageItem.marginColor || '#f87171');
       setMarginPosition(pageItem.marginPosition !== undefined ? pageItem.marginPosition : 75);
@@ -127,6 +135,10 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
       setHtmlContent(pageItem.formattedHtml || '');
       setInitialHtml(pageItem.formattedHtml || '');
       setCustomMargins(pageItem.customMargins || []);
+      
+      const sizeDef = sizePixels[mappedSize];
+      setCustomWidth(pageItem.customWidth || sizeDef.width);
+      setCustomHeight(pageItem.customHeight || sizeDef.height);
       
       if (editorRef.current) {
         editorRef.current.innerHTML = pageItem.formattedHtml || '';
@@ -149,7 +161,7 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
         bottomMarginRef.current.innerHTML = pageItem.bottomMarginHtml || '';
       }
     }
-  }, [pageItem?.id]);
+  }, [pageItem?.id, pageItem?.pageSize, pageItem?.customWidth, pageItem?.customHeight]);
 
   const savePageChanges = (updates: Partial<Notepaper>) => {
     if (!pageItem) return;
@@ -297,6 +309,22 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
     const val = e.currentTarget.innerHTML;
     setHtmlContent(val);
     savePageChanges({ formattedHtml: val });
+  };
+
+  const handleUndo = () => {
+    try {
+      document.execCommand('undo', false);
+    } catch (err) {
+      console.warn('Undo action failed', err);
+    }
+  };
+
+  const handleRedo = () => {
+    try {
+      document.execCommand('redo', false);
+    } catch (err) {
+      console.warn('Redo action failed', err);
+    }
   };
 
   const handleLeftMarginChange = (e: React.FormEvent<HTMLDivElement>) => {
@@ -664,28 +692,122 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
         </div>
 
         {/* Paper & Page styling controls */}
-        <div className="flex items-center gap-2 text-xs relative">
-          <div className="flex items-center gap-1 rounded border border-[#ebdcb9] bg-white px-1.5 py-1 text-[#5c4033]">
-            <Settings className="h-3.5 w-3.5" />
-            <select
-              value={pageSize}
-              onChange={e => {
-                const s = e.target.value as PageSize;
-                setPageSize(s);
-                savePageChanges({ pageSize: s });
-              }}
-              className="bg-transparent outline-none font-bold"
+        <div className="flex flex-col gap-1.5 text-xs relative select-none">
+          {/* Keep the undo/redo button row ABOVE the page shape changing slot */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleUndo}
+              className="flex items-center gap-1.5 rounded px-2.5 py-1 font-bold transition-all cursor-pointer border text-[11px] bg-red-50 border-[#8c2522] text-[#8c2522] hover:bg-red-100 shadow-2xs"
+              title="Undo last text edit"
             >
-              <option value="Letter">Letter</option>
-              <option value="A4">A4</option>
-              <option value="A5">A5 Leaf</option>
-              <option value="Pocket">Pocket</option>
-              <option value="Legal">Legal</option>
-              <option value="Letter_Landscape">Landscape Letter</option>
-              <option value="A4_Landscape">Landscape A4</option>
-              <option value="Square_Sm">Square Small (600x600)</option>
-              <option value="Square_Lg">Square Large (800x800)</option>
-            </select>
+              <span className="text-sm">↩</span>
+              <span>Undo Text</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleRedo}
+              className="flex items-center gap-1.5 rounded px-2.5 py-1 font-bold transition-all cursor-pointer border text-[11px] bg-red-50 border-[#8c2522] text-[#8c2522] hover:bg-red-100 shadow-2xs"
+              title="Redo last text edit"
+            >
+              <span>Redo Text</span>
+              <span className="text-sm">↪</span>
+            </button>
+          </div>
+
+          {/* The page shape slot itself */}
+          <div className="flex flex-wrap items-center gap-1.5 rounded border border-[#ebdcb9] bg-white px-2.5 py-1.5 text-[#5c4033]">
+            <div className="flex items-center gap-1">
+              <Settings className="h-3.5 w-3.5" />
+              <select
+                value={pageSize}
+                onChange={e => {
+                  const s = e.target.value as PageSize;
+                  setPageSize(s);
+                  const sizeDef = sizePixels[s] || { width: 800, height: 1131 };
+                  setCustomWidth(sizeDef.width);
+                  setCustomHeight(sizeDef.height);
+                  savePageChanges({
+                    pageSize: s,
+                    customWidth: sizeDef.width,
+                    customHeight: sizeDef.height
+                  } as any);
+                }}
+                className="bg-transparent outline-none font-bold"
+              >
+                <option value="Portrait">Portrait (1 : 1.414)</option>
+                <option value="Landscape">Landscape (1.414 : 1)</option>
+              </select>
+            </div>
+
+            {/* Custom Length and Width Sliders */}
+            <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-2 flex-wrap text-[#5c4033]">
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase text-[#8c2522]">Width:</span>
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={customWidth}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    const w = Number(val) || 300;
+                    const h = Math.round(pageSize === 'Portrait' ? w * 1.414 : w / 1.414);
+                    setCustomWidth(w);
+                    setCustomHeight(h);
+                    savePageChanges({ customWidth: w, customHeight: h } as any);
+                  }}
+                  className="w-10 bg-transparent outline-none font-bold font-mono text-center border-b border-[#ebdcb9]/60"
+                  placeholder="Width"
+                />
+                <input
+                  type="range"
+                  min={300}
+                  max={1650}
+                  value={customWidth}
+                  onChange={e => {
+                    const w = Number(e.target.value);
+                    const h = Math.round(pageSize === 'Portrait' ? w * 1.414 : w / 1.414);
+                    setCustomWidth(w);
+                    setCustomHeight(h);
+                    savePageChanges({ customWidth: w, customHeight: h } as any);
+                  }}
+                  className="w-16 accent-[#8c2522] cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 border-l border-[#ebdcb9]/45 pl-1.5">
+                <span className="text-[10px] font-bold uppercase text-[#8c2522]">Length:</span>
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={customHeight}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    const h = Number(val) || 400;
+                    const w = Math.round(pageSize === 'Portrait' ? h / 1.414 : h * 1.414);
+                    setCustomWidth(w);
+                    setCustomHeight(h);
+                    savePageChanges({ customWidth: w, customHeight: h } as any);
+                  }}
+                  className="w-10 bg-transparent outline-none font-bold font-mono text-center border-b border-[#ebdcb9]/60"
+                  placeholder="Length"
+                />
+                <input
+                  type="range"
+                  min={400}
+                  max={2250}
+                  value={customHeight}
+                  onChange={e => {
+                    const h = Number(e.target.value);
+                    const w = Math.round(pageSize === 'Portrait' ? h / 1.414 : h * 1.414);
+                    setCustomWidth(w);
+                    setCustomHeight(h);
+                    savePageChanges({ customWidth: w, customHeight: h } as any);
+                  }}
+                  className="w-16 accent-[#8c2522] cursor-pointer"
+                />
+              </div>
+            </div>
 
             <select
               value={paperStyle}
@@ -694,14 +816,14 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
                 setPaperStyle(p);
                 savePageChanges({ paperStyle: p });
               }}
-              className="bg-transparent outline-none font-bold border-l border-[#ebdcb9] pl-1"
+              className="bg-transparent outline-none font-bold border-l border-[#ebdcb9] pl-1.5"
             >
               <option value="unruled">Blank Parchment</option>
               <option value="ruled">Ruled Lines</option>
               <option value="grid">Grid Pattern</option>
             </select>
 
-            <label className="flex items-center gap-1 border-l border-[#ebdcb9] pl-2 cursor-pointer font-bold select-none">
+            <label className="flex items-center gap-1 border-l border-[#ebdcb9] pl-1.5 cursor-pointer font-bold select-none">
               <input
                 type="checkbox"
                 checked={hasMargin}
@@ -718,17 +840,19 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
               <button
                 type="button"
                 onClick={() => setShowMarginStyles(!showMarginStyles)}
-                className={`ml-1.5 p-1 rounded-sm border transition-colors ${
+                className={`ml-1 p-1 rounded-sm border transition-colors select-none ${
                   showMarginStyles 
                     ? 'bg-[#5c4033] text-white border-[#5c4033]' 
                     : 'bg-white text-[#5c4033] border-[#ebdcb9] hover:bg-[#faf4eb]'
                 }`}
-                title="Format Margins & Guidelines"
+                title="Format Guidelines"
               >
                 <Sliders className="h-3 w-3" />
               </button>
             )}
           </div>
+
+        </div>
 
           {/* Scriptorium Antique Zoom Controls */}
           <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-3 text-xs select-none">
@@ -1046,7 +1170,6 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
               )}
             </div>
           )}
-        </div>
 
         {/* Element inserters (shapes, charts, tables) */}
         <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-3">
@@ -1100,10 +1223,12 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}>
           <div
             id="scroll-paper-body"
-            className={`relative bg-[#fdfbf7] ${sizeClasses[pageSize]} border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 ${
+            className={`relative bg-[#fdfbf7] border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 ${
               draggingId ? 'select-none cursor-grabbing' : ''
             }`}
             style={{
+              width: `${customWidth}px`,
+              height: `${customHeight}px`,
               paddingLeft: hasMargin && marginSide !== 'right' ? `${marginPositionLeft + 24}px` : '48px',
               paddingRight: hasMargin && marginSide !== 'left' ? `${marginPositionRight + 24}px` : '48px',
               paddingTop: hasMargin && hasHorizontalMargin ? `${marginPositionTop + 24}px` : '48px',

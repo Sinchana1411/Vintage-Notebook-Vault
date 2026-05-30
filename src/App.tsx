@@ -37,45 +37,9 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDbLoading, setIsDbLoading] = useState(true);
 
-  // Progressive Web App Install prompt states
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallToast, setShowInstallToast] = useState<boolean>(false);
-
   // Drag-resizable sidebar functionality
   const [sidebarWidth, setSidebarWidth] = useState<number>(320);
   const [isDraggingSidebar, setIsDraggingSidebar] = useState<boolean>(false);
-
-  // Capture beforeinstallprompt event
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      // Only show if we aren't already running inside a standalone PWA shell
-      if (!window.matchMedia('(display-mode: standalone)').matches) {
-        setShowInstallToast(true);
-      }
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // Initial check for display mode standalone
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setShowInstallToast(false);
-    }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User responded to the install prompt: ${outcome}`);
-    setDeferredPrompt(null);
-    setShowInstallToast(false);
-  };
 
   // Load from IndexedDB on startup
   useEffect(() => {
@@ -232,7 +196,7 @@ export default function App() {
       title,
       createdAt: Date.now(),
       paperStyle: 'ruled',
-      pageSize: 'Letter',
+      pageSize: 'Portrait',
       hasMargin: true,
       formattedHtml: '<p style="font-family: Georgia, serif; font-size: 16px; color: #333; line-height: 1.8;">Begin scribing here...</p>',
       tables: [],
@@ -280,7 +244,7 @@ export default function App() {
       fileType: type,
       fileUrl: content,
       annotations: '',
-      pageSize: 'Letter',
+      pageSize: 'Portrait',
       paperStyle: 'ruled',
       hasMargin: true,
       stickyNotes: []
@@ -472,35 +436,6 @@ export default function App() {
           )}
         </div>
       </div>
-
-      {/* PWA Floating Install Toast Banner */}
-      {showInstallToast && (
-        <div id="pwa-install-toast" className="fixed bottom-6 right-6 z-[100] flex max-w-sm flex-col gap-3 rounded-lg border-2 border-[#ebdcb9] bg-[#fcf8f2] p-4 shadow-2xl animate-in slide-in-from-bottom-5 duration-300 font-serif">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl mt-0.5 select-none">🏛️</span>
-            <div className="flex-1">
-              <h4 className="font-display text-xs font-extrabold text-[#8c2522] uppercase tracking-wider">Install Scriptorium</h4>
-              <p className="text-[11px] text-[#5c4033] leading-relaxed mt-1">
-                Install Scriptorium to your device's home screen for lightning-fast offline access to folders and notebook files!
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center justify-end gap-2 border-t border-[#ebdcb9]/40 pt-2.5">
-            <button
-              onClick={() => setShowInstallToast(false)}
-              className="text-[#5c4033] hover:text-[#3e2723] text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 hover:bg-[#ebdcb9]/30 rounded transition-all cursor-pointer"
-            >
-              Maybe Later
-            </button>
-            <button
-              onClick={handleInstallClick}
-              className="bg-[#8c2522] hover:bg-[#6a1c19] text-white text-[10px] font-bold uppercase tracking-wider px-3.5 py-1.5 rounded shadow-sm transition-all cursor-pointer"
-            >
-              Install App
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

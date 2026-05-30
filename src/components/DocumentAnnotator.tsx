@@ -27,7 +27,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState<number>(1.0);
-  const [pageSize, setPageSize] = useState<PageSize>('Letter');
+  const [pageSize, setPageSize] = useState<PageSize>('Portrait');
   const [paperStyle, setPaperStyle] = useState<PaperStyle>('ruled');
   const [hasMargin, setHasMargin] = useState<boolean>(true);
   const [marginColor, setMarginColor] = useState<string>('#f87171');
@@ -42,6 +42,13 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   const [showMarginStyles, setShowMarginStyles] = useState<boolean>(false);
   const [customMargins, setCustomMargins] = useState<CustomMargin[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [customWidth, setCustomWidth] = useState<number>(800);
+  const [customHeight, setCustomHeight] = useState<number>(1131);
+
+  const sizePixels: Record<PageSize, { width: number; height: number }> = {
+    Portrait: { width: 800, height: 1131 },
+    Landscape: { width: 1131, height: 800 }
+  };
 
   // PDF Viewer Natively rendered states
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -52,12 +59,34 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [pdfDimensions, setPdfDimensions] = useState<{ width: number; height: number }>({ width: 720, height: 1000 });
 
+  // Undo annotation history
+  interface UndoAction { page: number; data: string; }
+  const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
+  const [redoStack, setRedoStack] = useState<UndoAction[]>([]);
+
   const isPdf = documentItem?.fileType === 'pdf';
+
+  // Reset undo history only when file changes
+  useEffect(() => {
+    if (documentItem) {
+      setUndoStack([]);
+      setRedoStack([]);
+      setCurrentPage(1);
+    }
+  }, [documentItem?.id]);
+
+  const mappedPageSize = (val: string): PageSize => {
+    if (val === 'Landscape' || val === 'Letter_Landscape' || val === 'A4_Landscape') {
+      return 'Landscape';
+    }
+    return 'Portrait';
+  };
 
   // Load state from active document item
   useEffect(() => {
     if (documentItem) {
-      setPageSize(documentItem.pageSize);
+      const mappedSize = mappedPageSize(documentItem.pageSize);
+      setPageSize(mappedSize);
       setPaperStyle(documentItem.paperStyle);
       setHasMargin(documentItem.hasMargin);
       setMarginColor(documentItem.marginColor || '#f87171');
@@ -70,9 +99,12 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
       setMarginStyle(documentItem.marginStyle || 'solid');
       setMarginSide(documentItem.marginSide || 'left');
       setCustomMargins(documentItem.customMargins || []);
-      setCurrentPage(1);
+
+      const sizeDef = sizePixels[mappedSize];
+      setCustomWidth((documentItem as any).customWidth || sizeDef.width);
+      setCustomHeight((documentItem as any).customHeight || sizeDef.height);
     }
-  }, [documentItem?.id]);
+  }, [documentItem?.id, documentItem?.pageSize, (documentItem as any)?.customWidth, (documentItem as any)?.customHeight]);
 
   // Load PDF document on change
   useEffect(() => {
@@ -335,6 +367,13 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Track state for undo before starting a drawing stroke
+    const pageAnns = (documentItem as any)?.pageAnnotations || {};
+    const currentData = pageAnns[currentPage] || (currentPage === 1 ? (documentItem?.annotations || '') : '');
+    setUndoStack(prev => [...prev, { page: currentPage, data: currentData }]);
+    setRedoStack([]); // Clear redo cache on a new user stroke
+
     const { x, y } = getCoordinates(e);
     setIsDrawing(true);
     setLastPos({ x, y });
@@ -438,11 +477,17 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   const clearCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas || !documentItem) return;
+
+    // Track state for undo before clearing the canvas
+    const pageAnns = (documentItem as any)?.pageAnnotations || {};
+    const currentData = pageAnns[currentPage] || (currentPage === 1 ? (documentItem?.annotations || '') : '');
+    setUndoStack(prev => [...prev, { page: currentPage, data: currentData }]);
+    setRedoStack([]); // Clear redo stack on clear
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const pageAnns = (documentItem as any)?.pageAnnotations || {};
     const updatedPageAnns = {
       ...pageAnns,
       [currentPage]: ''
@@ -451,6 +496,88 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
     onUpdateDocument({
       ...documentItem,
       annotations: currentPage === 1 ? '' : (documentItem.annotations || ''),
+      ...({ pageAnnotations: updatedPageAnns } as any)
+    });
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+
+    const lastAction = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+
+    // Save current state for redo
+    const pageAnns = (documentItem as any)?.pageAnnotations || {};
+    const currentData = pageAnns[currentPage] || (currentPage === 1 ? (documentItem?.annotations || '') : '');
+    setRedoStack(prev => [...prev, { page: currentPage, data: currentData }]);
+
+    if (lastAction.page !== currentPage) {
+      setCurrentPage(lastAction.page);
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (lastAction.data) {
+      const img = new Image();
+      img.src = lastAction.data;
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+      };
+    }
+
+    const updatedPageAnns = {
+      ...pageAnns,
+      [lastAction.page]: lastAction.data
+    };
+
+    onUpdateDocument({
+      ...documentItem,
+      annotations: lastAction.page === 1 ? lastAction.data : (documentItem.annotations || ''),
+      ...({ pageAnnotations: updatedPageAnns } as any)
+    });
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+
+    const lastRedo = redoStack[redoStack.length - 1];
+    setRedoStack(prev => prev.slice(0, -1));
+
+    // Save current state for undo before applying redo
+    const pageAnns = (documentItem as any)?.pageAnnotations || {};
+    const currentData = pageAnns[currentPage] || (currentPage === 1 ? (documentItem?.annotations || '') : '');
+    setUndoStack(prev => [...prev, { page: currentPage, data: currentData }]);
+
+    if (lastRedo.page !== currentPage) {
+      setCurrentPage(lastRedo.page);
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (lastRedo.data) {
+      const img = new Image();
+      img.src = lastRedo.data;
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+      };
+    }
+
+    const updatedPageAnns = {
+      ...pageAnns,
+      [lastRedo.page]: lastRedo.data
+    };
+
+    onUpdateDocument({
+      ...documentItem,
+      annotations: lastRedo.page === 1 ? lastRedo.data : (documentItem.annotations || ''),
       ...({ pageAnnotations: updatedPageAnns } as any)
     });
   };
@@ -525,15 +652,8 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
 
   // Sizing styles
   const sizeClasses: Record<PageSize, string> = {
-    Letter: 'w-full max-w-[800px] min-h-[1000px]',
-    A4: 'w-full max-w-[760px] min-h-[1050px]',
-    A5: 'w-full max-w-[550px] min-h-[750px]',
-    Pocket: 'w-full max-w-[420px] min-h-[580px]',
-    Legal: 'w-full max-w-[840px] min-h-[1200px]',
-    Letter_Landscape: 'w-full max-w-[1050px] min-h-[750px]',
-    A4_Landscape: 'w-full max-w-[1080px] min-h-[720px]',
-    Square_Sm: 'w-full max-w-[600px] min-h-[600px]',
-    Square_Lg: 'w-full max-w-[800px] min-h-[800px]'
+    Portrait: 'w-full max-w-[800px] min-h-[1131px]',
+    Landscape: 'w-full max-w-[1131px] min-h-[800px]'
   };
 
   return (
@@ -671,69 +791,185 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
         <div className="flex items-center gap-3 relative">
           {/* Format config indicators */}
           {!isPdf && (
-            <div className="flex items-center gap-1.5 rounded border border-[#ebdcb9] bg-white px-2 py-1 text-xs text-[#5c4033]">
-              <Settings className="h-3.5 w-3.5" />
-              <select
-                value={pageSize}
-                onChange={e => {
-                  const s = e.target.value as PageSize;
-                  setPageSize(s);
-                  onUpdateDocument({ ...documentItem, pageSize: s });
-                }}
-                className="bg-transparent outline-none font-bold"
-              >
-                <option value="Letter">Letter</option>
-                <option value="A4">A4 Size</option>
-                <option value="A5">A5 Scroll</option>
-                <option value="Pocket">Pocket Book</option>
-                <option value="Legal">Legal Scroll</option>
-                <option value="Letter_Landscape">Landscape Letter</option>
-                <option value="A4_Landscape">Landscape A4</option>
-                <option value="Square_Sm">Square Small (600x600)</option>
-                <option value="Square_Lg">Square Large (800x800)</option>
-              </select>
-
-              <select
-                value={paperStyle}
-                onChange={e => {
-                  const p = e.target.value as PaperStyle;
-                  setPaperStyle(p);
-                  onUpdateDocument({ ...documentItem, paperStyle: p });
-                }}
-                className="bg-transparent outline-none font-bold border-l border-[#ebdcb9] pl-1.5"
-              >
-                <option value="unruled">Blank Parchment</option>
-                <option value="ruled">Ruled Sheet</option>
-                <option value="grid">Grid Sheet</option>
-              </select>
-
-              <label className="flex items-center gap-1 border-l border-[#ebdcb9] pl-1.5 cursor-pointer font-bold select-none">
-                <input
-                  type="checkbox"
-                  checked={hasMargin}
-                  onChange={e => {
-                    const m = e.target.checked;
-                    setHasMargin(m);
-                    onUpdateDocument({ ...documentItem, hasMargin: m });
-                  }}
-                  className="rounded accent-[#8c2522]"
-                />
-                <span>Margin</span>
-              </label>
-              {hasMargin && (
+            <div className="flex flex-col gap-1.5 text-xs relative select-none">
+              {/* Keep the undo/redo button row ABOVE the page shape changing slot */}
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowMarginStyles(!showMarginStyles)}
-                  className={`ml-1 select-none p-1 rounded-sm border transition-colors ${
-                    showMarginStyles 
-                      ? 'bg-[#5c4033] text-white border-[#5c4033]' 
-                      : 'bg-white text-[#5c4033] border-[#ebdcb9] hover:bg-[#faf4eb]'
+                  onClick={handleUndo}
+                  disabled={undoStack.length === 0}
+                  className={`flex items-center gap-1.5 rounded px-2.5 py-1 font-bold transition-all cursor-pointer border text-[11px] ${
+                    undoStack.length > 0
+                      ? 'bg-red-50 border-[#8c2522] text-[#8c2522] hover:bg-red-100 shadow-2xs'
+                      : 'bg-[#faf4eb] border-[#ebdcb9]/60 text-[#5c4033]/40 cursor-not-allowed opacity-60'
                   }`}
-                  title="Format Guidelines"
+                  title="Undo last stroke"
                 >
-                  <Sliders className="h-3 w-3" />
+                  <span className="text-sm">↩</span>
+                  <span>Undo Stroke</span>
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={handleRedo}
+                  disabled={redoStack.length === 0}
+                  className={`flex items-center gap-1.5 rounded px-2.5 py-1 font-bold transition-all cursor-pointer border text-[11px] ${
+                    redoStack.length > 0
+                      ? 'bg-red-50 border-[#8c2522] text-[#8c2522] hover:bg-red-100 shadow-2xs'
+                      : 'bg-[#faf4eb] border-[#ebdcb9]/60 text-[#5c4033]/40 cursor-not-allowed opacity-60'
+                  }`}
+                  title="Redo last stroke"
+                >
+                  <span>Redo Stroke</span>
+                  <span className="text-sm">↪</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={clearCanvas}
+                  className="rounded border border-[#e5a2a2] bg-[#fcf8f2] px-2.5 py-1 font-bold text-red-800 hover:bg-[#e5a2a2]/20 select-none cursor-pointer"
+                  title="Clear all doodles"
+                >
+                  Clear All
+                </button>
+              </div>
+
+              {/* The page shape slot itself */}
+              <div className="flex flex-wrap items-center gap-1.5 rounded border border-[#ebdcb9] bg-white px-2.5 py-1.5 text-[#5c4033]">
+                <div className="flex items-center gap-1">
+                  <Settings className="h-3.5 w-3.5" />
+                  <select
+                    value={pageSize}
+                    onChange={e => {
+                      const s = e.target.value as PageSize;
+                      setPageSize(s);
+                      const sizeDef = sizePixels[s] || { width: 800, height: 1131 };
+                      setCustomWidth(sizeDef.width);
+                      setCustomHeight(sizeDef.height);
+                      onUpdateDocument({
+                        ...documentItem,
+                        pageSize: s,
+                        customWidth: sizeDef.width,
+                        customHeight: sizeDef.height
+                      } as any);
+                    }}
+                    className="bg-transparent outline-none font-bold"
+                  >
+                    <option value="Portrait">Portrait (1 : 1.414)</option>
+                    <option value="Landscape">Landscape (1.414 : 1)</option>
+                  </select>
+                </div>
+
+                {/* Custom Length and Width Sliders */}
+                <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-2 flex-wrap text-[#5c4033]">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold uppercase text-[#8c2522]">Width:</span>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={customWidth}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        const w = Number(val) || 300;
+                        const h = Math.round(pageSize === 'Portrait' ? w * 1.414 : w / 1.414);
+                        setCustomWidth(w);
+                        setCustomHeight(h);
+                        onUpdateDocument({ ...documentItem, customWidth: w, customHeight: h } as any);
+                      }}
+                      className="w-10 bg-transparent outline-none font-bold font-mono text-center border-b border-[#ebdcb9]/60"
+                      placeholder="Width"
+                    />
+                    <input
+                      type="range"
+                      min={300}
+                      max={1650}
+                      value={customWidth}
+                      onChange={e => {
+                        const w = Number(e.target.value);
+                        const h = Math.round(pageSize === 'Portrait' ? w * 1.414 : w / 1.414);
+                        setCustomWidth(w);
+                        setCustomHeight(h);
+                        onUpdateDocument({ ...documentItem, customWidth: w, customHeight: h } as any);
+                      }}
+                      className="w-16 accent-[#8c2522] cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 border-l border-[#ebdcb9]/45 pl-1.5">
+                    <span className="text-[10px] font-bold uppercase text-[#8c2522]">Length:</span>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={customHeight}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        const h = Number(val) || 400;
+                        const w = Math.round(pageSize === 'Portrait' ? h / 1.414 : h * 1.414);
+                        setCustomWidth(w);
+                        setCustomHeight(h);
+                        onUpdateDocument({ ...documentItem, customWidth: w, customHeight: h } as any);
+                      }}
+                      className="w-10 bg-transparent outline-none font-bold font-mono text-center border-b border-[#ebdcb9]/60"
+                      placeholder="Length"
+                    />
+                    <input
+                      type="range"
+                      min={400}
+                      max={2250}
+                      value={customHeight}
+                      onChange={e => {
+                        const h = Number(e.target.value);
+                        const w = Math.round(pageSize === 'Portrait' ? h / 1.414 : h * 1.414);
+                        setCustomWidth(w);
+                        setCustomHeight(h);
+                        onUpdateDocument({ ...documentItem, customWidth: w, customHeight: h } as any);
+                      }}
+                      className="w-16 accent-[#8c2522] cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <select
+                  value={paperStyle}
+                  onChange={e => {
+                    const p = e.target.value as PaperStyle;
+                    setPaperStyle(p);
+                    onUpdateDocument({ ...documentItem, paperStyle: p });
+                  }}
+                  className="bg-transparent outline-none font-bold border-l border-[#ebdcb9] pl-1.5"
+                >
+                  <option value="unruled">Blank Parchment</option>
+                  <option value="ruled">Ruled Sheet</option>
+                  <option value="grid">Grid Sheet</option>
+                </select>
+
+                <label className="flex items-center gap-1 border-l border-[#ebdcb9] pl-1.5 cursor-pointer font-bold select-none">
+                  <input
+                    type="checkbox"
+                    checked={hasMargin}
+                    onChange={e => {
+                      const m = e.target.checked;
+                      setHasMargin(m);
+                      onUpdateDocument({ ...documentItem, hasMargin: m });
+                    }}
+                    className="rounded accent-[#8c2522]"
+                  />
+                  <span>Margin</span>
+                </label>
+                {hasMargin && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMarginStyles(!showMarginStyles)}
+                    className={`ml-1 p-1 rounded-sm border transition-colors select-none ${
+                      showMarginStyles 
+                        ? 'bg-[#5c4033] text-white border-[#5c4033]' 
+                        : 'bg-white text-[#5c4033] border-[#ebdcb9] hover:bg-[#faf4eb]'
+                    }`}
+                    title="Format Guidelines"
+                  >
+                    <Sliders className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+
             </div>
           )}
 
@@ -1091,6 +1327,28 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
             Clear Draft
           </button>
 
+          {/* Undo Annotations Button */}
+          <button
+            onClick={handleUndo}
+            disabled={undoStack.length === 0}
+            title="Undo last annotation stroke"
+            className="rounded-sm border border-[#ebdcb9] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb] disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer select-none"
+          >
+            <span className="text-sm">↩</span>
+            <span>Undo Stroke</span>
+          </button>
+
+          {/* Redo Annotations Button */}
+          <button
+            onClick={handleRedo}
+            disabled={redoStack.length === 0}
+            title="Redo last annotation stroke"
+            className="rounded-sm border border-[#ebdcb9] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb] disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer select-none"
+          >
+            <span className="text-sm">↪</span>
+            <span>Redo Stroke</span>
+          </button>
+
           {/* Import file device btn */}
           <label className="flex items-center gap-1.5 rounded-sm bg-[#5c4033] px-3 py-1.5 text-xs font-bold text-[#fdfbf7] cursor-pointer hover:bg-[#3e2723]">
             <Upload className="h-3.5 w-3.5" />
@@ -1112,13 +1370,15 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
             id="scroll-paper-body"
             className={isPdf 
               ? "relative bg-[#fdfbf7] border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300"
-              : `relative bg-[#fdfbf7] ${sizeClasses[pageSize]} border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 ${
+              : `relative bg-[#fdfbf7] border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 ${
                   draggingId ? 'select-none cursor-grabbing animate-none' : ''
                 }`
             }
             style={isPdf 
               ? { width: `${pdfDimensions.width}px`, height: `${pdfDimensions.height}px`, padding: 0 }
               : {
+                  width: `${customWidth}px`,
+                  height: `${customHeight}px`,
                   paddingLeft: hasMargin && marginSide !== 'right' ? `${marginPositionLeft + 24}px` : '48px',
                   paddingRight: hasMargin && marginSide !== 'left' ? `${marginPositionRight + 24}px` : '48px',
                   paddingTop: hasMargin && hasHorizontalMargin ? `${marginPositionTop + 24}px` : '48px',

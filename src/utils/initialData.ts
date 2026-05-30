@@ -150,7 +150,7 @@ export const INITIAL_WORKSPACE: VintageWorkspaceData = {
       title: 'Ind AS 115: Five-Step Revenue Model',
       createdAt: Date.now() - 465000,
       paperStyle: 'ruled',
-      pageSize: 'Letter',
+      pageSize: 'Portrait',
       hasMargin: true,
       formattedHtml: `
         <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; color: #8c2522; margin-bottom: 12px; font-weight: bold; border-b: 1px solid #ebdcb9; padding-bottom: 4px;">Ind AS 115 - Revenue from Contracts with Customers</h2>
@@ -204,7 +204,7 @@ export const INITIAL_WORKSPACE: VintageWorkspaceData = {
       title: 'Ind AS 103: Business Combinations & Goodwill',
       createdAt: Date.now() - 455000,
       paperStyle: 'ruled',
-      pageSize: 'Letter',
+      pageSize: 'Portrait',
       hasMargin: true,
       formattedHtml: `
         <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; color: #8c2522; margin-bottom: 12px; font-weight: bold; border-b: 1px solid #ebdcb9; padding-bottom: 4px;">Ind AS 103 - Accounting for Business Combinations</h2>
@@ -241,7 +241,7 @@ export const INITIAL_WORKSPACE: VintageWorkspaceData = {
       title: 'CAPM: Capital Asset Pricing Model Core Formula',
       createdAt: Date.now() - 365000,
       paperStyle: 'grid',
-      pageSize: 'A4',
+      pageSize: 'Portrait',
       hasMargin: true,
       formattedHtml: `
         <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; color: #1e3557; margin-bottom: 12px; font-weight: bold; border-b: 1px solid #ebdcb9; padding-bottom: 4px;">Capital Asset Pricing Model (CAPM)</h2>
@@ -290,7 +290,7 @@ export const INITIAL_WORKSPACE: VintageWorkspaceData = {
       title: 'SA 240: Auditors Responsibilities Relating to Fraud',
       createdAt: Date.now() - 265000,
       paperStyle: 'ruled',
-      pageSize: 'Letter',
+      pageSize: 'Portrait',
       hasMargin: true,
       formattedHtml: `
         <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; color: #3b5220; margin-bottom: 12px; font-weight: bold; border-b: 1px solid #ebdcb9; padding-bottom: 4px;">SA 240 - The Auditor's Responsibility Relating to Fraud</h2>
@@ -328,7 +328,7 @@ export const INITIAL_WORKSPACE: VintageWorkspaceData = {
       title: 'T-Account Double Entry Skeleton Sketch',
       createdAt: Date.now() - 35000,
       paperStyle: 'grid',
-      pageSize: 'A4',
+      pageSize: 'Portrait',
       hasMargin: true,
       drawingsData: ''
     }
@@ -350,7 +350,7 @@ export const INITIAL_WORKSPACE: VintageWorkspaceData = {
 
 4. E-Commerce Operators (ECO): Section 9(5) specifies passenger transport, housekeeping, and accommodation services where the E-Commerce giant stands liable as the legal supplier.`,
       annotations: '',
-      pageSize: 'Letter',
+      pageSize: 'Portrait',
       paperStyle: 'ruled',
       hasMargin: true
     }
