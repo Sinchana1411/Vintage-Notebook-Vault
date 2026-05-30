@@ -604,7 +604,7 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
   return (
     <div className="flex flex-1 flex-col bg-[#faf4eb] overflow-hidden font-serif">
       {/* HANDWRITING COMPONENT WORKBENCH RIBBON OVERLAYS */}
-      <div className="relative z-30 flex flex-wrap items-center justify-between gap-y-2 border-b border-[#ebdcb9] bg-[#fcf8f2] px-6 py-2 shadow-2xs">
+      <div className="relative z-30 flex flex-wrap items-center justify-between gap-y-1 gap-x-4 border-b border-[#ebdcb9] bg-[#fcf8f2] px-6 py-1 shadow-2xs">
         
         {/* Style selection */}
         <div className="flex items-center gap-1">
@@ -1270,7 +1270,7 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
       </div>
 
       {/* COMPONENT DRAWWORKSPACE */}
-      <div className="flex-1 overflow-auto p-6 flex justify-center items-start vintage-scroll">
+      <div className="flex-1 overflow-auto px-6 pt-2 pb-6 flex justify-center items-start vintage-scroll">
         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}>
           <div
             id="scroll-paper-body"
