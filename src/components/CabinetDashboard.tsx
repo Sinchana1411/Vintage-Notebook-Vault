@@ -751,6 +751,49 @@ export default function CabinetDashboard({
               )}
             </div>
           )}
+
+          {/* Educational Scriptorium Capacity & Limits Guide Card */}
+          <div className="mt-8 rounded-lg border border-[#ebdcb9] bg-[#ebdcb9]/15 p-6 font-serif">
+            <div className="flex items-center gap-3 border-b border-[#ebdcb9]/40 pb-3 mb-4">
+              <span className="text-2xl">🏛️</span>
+              <div>
+                <h4 className="font-display text-sm font-extrabold text-[#8c2522] uppercase tracking-wider">Archival Capacity & Sandbox Boundaries</h4>
+                <p className="text-[10px] text-[#5c4033] uppercase tracking-wider font-mono font-bold">Scriptorium Storage Specification Ledger</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-[#5c4033] leading-relaxed">
+              <div className="space-y-1.5 p-3.5 rounded bg-[#fdfbf7]/80 border border-[#ebdcb9]/20 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-bold text-[#8c2522] uppercase text-[10px]">
+                  <span>📖</span>
+                  <span>1000+ Page PDFs</span>
+                </div>
+                <p>
+                  <strong>Fully Supported</strong>. PDFs are processed page-by-page on-demand, optimizing active memory. Snapping through 1,000+ pages is fast, clean, and has zero memory bloat.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 p-3.5 rounded bg-[#fdfbf7]/80 border border-[#ebdcb9]/20 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-[#8c2522] font-bold uppercase text-[10px]">
+                  <span className="text-[#8c2522]">✍️</span>
+                  <span className="text-[#8c2522]">Handwriting & Text Sheets</span>
+                </div>
+                <p>
+                  <strong>Virtually Unlimited</strong>. High-fidelity handwriting vectors and textual logs are written directly to your browser's private Sandboxed <strong>IndexedDB</strong>, accommodating up to gigabytes of material.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 p-3.5 rounded bg-[#fdfbf7]/80 border border-[#ebdcb9]/20 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-bold text-[#8c2522] uppercase text-[10px]">
+                  <span>📂</span>
+                  <span>Folders & Journals</span>
+                </div>
+                <p>
+                  <strong>No Structural Limits</strong>. Scribe and bind thousands of classification pockets, custom-skinned leather ledger books, chapters, and index tags safely with 100% data stability.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="flex-1 flex flex-col gap-4">

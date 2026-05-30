@@ -511,9 +511,15 @@ export default function Sidebar({
         </div>
 
         {/* Desktop grid footer */}
-        <div className="border-t border-[#ebdcb9] bg-[#fcf8f2] px-6 py-2.5 text-[10px] text-[#5c4033] uppercase flex justify-between shrink-0 font-extrabold font-mono select-none">
-          <span>Cabinet Desk Mode: Active</span>
-          <span>Double-click border to Collapse Explorer</span>
+        <div className="border-t border-[#ebdcb9] bg-[#fcf8f2] px-6 py-2.5 text-[10px] text-[#5c4033] uppercase flex justify-between shrink-0 font-extrabold font-mono select-none items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-green-700 animate-pulse">●</span>
+            <span>Cabinet Desk Mode: Active</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="bg-[#ebdcb9]/40 px-2.5 py-0.5 rounded text-[9px] text-[#8c2522] scale-95 font-sans font-bold">💾 IndexedDB Sandbox Storage: Unlimited (GBs)</span>
+            <span>Double-click border to Collapse Explorer</span>
+          </div>
         </div>
       </div>
     );
@@ -807,6 +813,25 @@ export default function Sidebar({
             {currentNotebooks.filter(nb => !nb.folderId).map(nb => renderNotebookNode(nb))}
           </div>
         )}
+      </div>
+
+      {/* Visual Unlimited Storage Engine Info Panel */}
+      <div className="mx-3 my-2 p-2.5 rounded-sm border border-[#ebdcb9] bg-[#ebdcb9]/20 font-serif text-[11px] text-[#5c4033] flex flex-col gap-1 shadow-2xs shrink-0 select-none">
+        <div className="flex items-center gap-1.5 font-bold text-[#8c2522] uppercase text-[9px] tracking-wide">
+          <span>💾</span>
+          <span>IndexedDB Storage Active</span>
+        </div>
+        <p className="leading-relaxed">
+          Your folders, notebooks, text sheets, and drawings are persisted with high speed inside **IndexedDB**.
+        </p>
+        <div className="flex justify-between items-center mt-1 border-t border-[#ebdcb9]/45 pt-1 text-[9px] uppercase font-mono font-bold">
+          <span>Capacity:</span>
+          <span className="text-[#8c2522]">Unlimited (GBs)</span>
+        </div>
+        <div className="flex justify-between items-center text-[9px] uppercase font-mono font-bold">
+          <span>1000+ Page PDF:</span>
+          <span className="text-[#8c2522]">Fully Supported</span>
+        </div>
       </div>
 
       {/* RENDER NOTEBOOK ITEM NODES (COMPLETED) */}

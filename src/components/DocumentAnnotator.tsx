@@ -50,6 +50,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   const [pdfLoading, setPdfLoading] = useState<boolean>(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [pdfDimensions, setPdfDimensions] = useState<{ width: number; height: number }>({ width: 720, height: 1000 });
 
   const isPdf = documentItem?.fileType === 'pdf';
 
@@ -142,6 +143,10 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
 
         canvas.height = viewport.height;
         canvas.width = viewport.width;
+
+        if (active) {
+          setPdfDimensions({ width: viewport.width, height: viewport.height });
+        }
 
         context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -536,51 +541,48 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
       {/* Scrollable Document Area Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e2d6c5] bg-[#fcf8f2] px-6 py-2.5 shadow-2xs">
         {/* Tools */}
-        {isPdf ? (
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 rounded bg-[#8c2522]/10 border border-[#8c2522]/25 px-2.5 py-1 text-[11px] font-bold text-[#8c2522] uppercase tracking-wide">
-              📖 Antique Leaf Viewer
+        <div className="flex items-center gap-1">
+          {isPdf && (
+            <span className="flex items-center gap-1.5 rounded bg-[#8c2522]/10 border border-[#8c2522]/25 px-2.5 py-1 text-[11px] font-bold text-[#8c2522] uppercase tracking-wide mr-2 select-none">
+              📖 PDF Leaf
             </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            {/* Pen */}
-            <button
-              onClick={() => setActiveTool('pen')}
-              className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
-                activeTool === 'pen' ? 'bg-[#5c4033] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-              }`}
-            >
-              <PenTool className="h-4 w-4" />
-              <span>Iron Pen</span>
-            </button>
+          )}
+          {/* Pen */}
+          <button
+            onClick={() => setActiveTool('pen')}
+            className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
+              activeTool === 'pen' ? 'bg-[#5c4033] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+            }`}
+          >
+            <PenTool className="h-4 w-4" />
+            <span>Iron Pen</span>
+          </button>
 
-            {/* Highlighter */}
-            <button
-              onClick={() => setActiveTool('highlighter')}
-              className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
-                activeTool === 'highlighter' ? 'bg-[#c69214] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-              }`}
-            >
-              <Palette className="h-4 w-4" />
-              <span>Highlighter</span>
-            </button>
+          {/* Highlighter */}
+          <button
+            onClick={() => setActiveTool('highlighter')}
+            className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
+              activeTool === 'highlighter' ? 'bg-[#c69214] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+            }`}
+          >
+            <Palette className="h-4 w-4" />
+            <span>Highlighter</span>
+          </button>
 
-            {/* Eraser */}
-            <button
-              onClick={() => setActiveTool('eraser')}
-              className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
-                activeTool === 'eraser' ? 'bg-[#8c2522] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-              }`}
-            >
-              <Eraser className="h-4 w-4" />
-              <span>Clean Eraser</span>
-            </button>
-          </div>
-        )}
+          {/* Eraser */}
+          <button
+            onClick={() => setActiveTool('eraser')}
+            className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
+              activeTool === 'eraser' ? 'bg-[#8c2522] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+            }`}
+          >
+            <Eraser className="h-4 w-4" />
+            <span>Clean Eraser</span>
+          </button>
+        </div>
 
         {/* Color Palette Selector */}
-        {!isPdf && activeTool === 'pen' && (
+        {activeTool === 'pen' && (
           <div className="flex items-center gap-2 border-l border-[#e2d6c5] pl-3">
             <span className="text-[10px] font-bold text-[#5c4033] uppercase">Ink:</span>
             <div className="flex items-center gap-1.5">
@@ -616,7 +618,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
         )}
 
          {/* Highlighter colors */}
-        {!isPdf && activeTool === 'highlighter' && (
+        {activeTool === 'highlighter' && (
           <div className="flex items-center gap-2 border-l border-[#e2d6c5] pl-3">
             <span className="text-[10px] font-bold text-[#5c4033] uppercase">Tint:</span>
             <div className="flex items-center gap-1.5">
@@ -650,7 +652,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
         )}
 
         {/* Eraser Width Settings Slider */}
-        {!isPdf && activeTool === 'eraser' && (
+        {activeTool === 'eraser' && (
           <div className="flex items-center gap-2 border-l border-[#e2d6c5] pl-3 text-xs animate-in fade-in slide-in-from-top-1">
             <span className="text-[10px] font-bold text-[#5c4033] uppercase">Eraser width:</span>
             <input
@@ -796,36 +798,32 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           )}
 
           {/* Sticky Notes Button */}
-          {!isPdf && (
-            <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
-              <button
-                type="button"
-                onClick={handleAddStickyNote}
-                disabled={!documentItem}
-                className="flex items-center gap-1 p-1 px-2 pb-1.5 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/25 rounded shadow-xs text-[11px] font-semibold cursor-pointer select-none transition-all disabled:opacity-50"
-                title="Add customizable Sticky Note annotation onto this document"
-              >
-                <span className="text-amber-700">📌</span>
-                <span>Add Sticky Note</span>
-              </button>
-            </div>
-          )}
+          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
+            <button
+              type="button"
+              onClick={handleAddStickyNote}
+              disabled={!documentItem}
+              className="flex items-center gap-1 p-1 px-2 pb-1.5 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/25 rounded shadow-xs text-[11px] font-semibold cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Add customizable Sticky Note annotation onto this document"
+            >
+              <span className="text-amber-700">📌</span>
+              <span>Add Sticky Note</span>
+            </button>
+          </div>
 
           {/* Export to PDF Button */}
-          {!isPdf && (
-            <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
-              <button
-                type="button"
-                onClick={exportToPDF}
-                disabled={!documentItem}
-                className="flex items-center gap-1.5 p-1 px-2.5 pb-1.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
-                title="Export this annotated document strictly in PDF format"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Export PDF</span>
-              </button>
-            </div>
-          )}
+          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
+            <button
+              type="button"
+              onClick={exportToPDF}
+              disabled={!documentItem}
+              className="flex items-center gap-1.5 p-1 px-2.5 pb-1.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Export this annotated document strictly in PDF format"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export PDF</span>
+            </button>
+          </div>
 
           {/* Floated Scribe Guidelines Formatting Panel */}
           {hasMargin && showMarginStyles && (
@@ -1085,15 +1083,13 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           )}
 
           {/* Clear Draft button */}
-          {!isPdf && (
-            <button
-              onClick={clearCanvas}
-              title="Clean All Pencil Annotations"
-              className="rounded-sm border border-[#e5a2a2] bg-[#fcf8f2] px-2.5 py-1.5 text-xs font-semibold text-red-800 hover:bg-[#e5a2a2]/20"
-            >
-              Clear Draft
-            </button>
-          )}
+          <button
+            onClick={clearCanvas}
+            title="Clean All Pencil Annotations"
+            className="rounded-sm border border-[#e5a2a2] bg-[#fcf8f2] px-2.5 py-1.5 text-xs font-semibold text-red-800 hover:bg-[#e5a2a2]/20"
+          >
+            Clear Draft
+          </button>
 
           {/* Import file device btn */}
           <label className="flex items-center gap-1.5 rounded-sm bg-[#5c4033] px-3 py-1.5 text-xs font-bold text-[#fdfbf7] cursor-pointer hover:bg-[#3e2723]">
@@ -1115,19 +1111,22 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           <div
             id="scroll-paper-body"
             className={isPdf 
-              ? "relative bg-transparent flex flex-col transition-all duration-300"
+              ? "relative bg-[#fdfbf7] border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300"
               : `relative bg-[#fdfbf7] ${sizeClasses[pageSize]} border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 ${
                   draggingId ? 'select-none cursor-grabbing animate-none' : ''
                 }`
             }
-            style={isPdf ? { padding: 0 } : {
-              paddingLeft: hasMargin && marginSide !== 'right' ? `${marginPositionLeft + 24}px` : '48px',
-              paddingRight: hasMargin && marginSide !== 'left' ? `${marginPositionRight + 24}px` : '48px',
-              paddingTop: hasMargin && hasHorizontalMargin ? `${marginPositionTop + 24}px` : '48px',
-              paddingBottom: hasMargin && hasHorizontalMargin ? `${marginPositionBottom + 48}px` : '64px',
-            }}
-            onPointerMove={isPdf ? undefined : handlePointerMove}
-            onPointerUp={isPdf ? undefined : handlePointerUp}
+            style={isPdf 
+              ? { width: `${pdfDimensions.width}px`, height: `${pdfDimensions.height}px`, padding: 0 }
+              : {
+                  paddingLeft: hasMargin && marginSide !== 'right' ? `${marginPositionLeft + 24}px` : '48px',
+                  paddingRight: hasMargin && marginSide !== 'left' ? `${marginPositionRight + 24}px` : '48px',
+                  paddingTop: hasMargin && hasHorizontalMargin ? `${marginPositionTop + 24}px` : '48px',
+                  paddingBottom: hasMargin && hasHorizontalMargin ? `${marginPositionBottom + 48}px` : '64px',
+                }
+            }
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
           >
           {/* Ruling Overlay if matching */}
           {!isPdf && paperStyle !== 'unruled' && (
@@ -1303,23 +1302,23 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           {/* Content layer depending on file type */}
           <div className="relative z-10 flex-1 text-sm text-[#333] leading-relaxed select-text font-serif">
             {documentItem.fileType === 'pdf' ? (
-              <div className="w-full relative z-10 flex flex-col items-center select-none pointer-events-none">
+              <div className="absolute inset-0 z-0 bg-transparent select-none pointer-events-none">
                 {pdfLoading && (
-                  <div className="flex flex-col items-center justify-center py-12 text-stone-600 font-sans w-full">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8c2522] mb-3"></div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-stone-600 font-sans">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8c2522] mb-3 border-t-transparent"></div>
                     <p className="text-xs font-bold uppercase tracking-wider">Unrolling Ancient Manuscript Scroll...</p>
                   </div>
                 )}
                 {pdfError && (
-                  <div className="p-6 text-center text-[#8c2522] bg-red-50 border border-red-200 rounded font-sans w-full">
-                    <p className="font-bold">Scribe Decryption Error</p>
-                    <p className="text-xs mt-1">{pdfError}</p>
+                  <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-[#8c2522] bg-red-50 border border-red-200 rounded font-sans">
+                    <div>
+                      <p className="font-bold">Scribe Decryption Error</p>
+                      <p className="text-xs mt-1">{pdfError}</p>
+                    </div>
                   </div>
                 )}
                 {!pdfLoading && !pdfError && (
-                  <div className="w-full flex justify-center py-2 bg-transparent">
-                    <canvas ref={pdfCanvasRef} className="max-w-full h-auto shadow-sm rounded-sm" />
-                  </div>
+                  <canvas ref={pdfCanvasRef} className="w-full h-full rounded-sm" />
                 )}
               </div>
             ) : documentItem.fileType === 'txt' ? (
@@ -1339,24 +1338,22 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           </div>
 
           {/* Annotation Canvas Overlay */}
-          {!isPdf && (
-            <canvas
-              ref={canvasRef}
-              width={850}
-              height={1150}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-              className="absolute inset-0 w-full h-full z-20 cursor-crosshair select-none"
-            />
-          )}
+          <canvas
+            ref={canvasRef}
+            width={isPdf ? pdfDimensions.width : 850}
+            height={isPdf ? pdfDimensions.height : 1150}
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+            className="absolute inset-0 w-full h-full z-20 cursor-crosshair select-none"
+          />
 
           {/* Draggable Sticky Notes Annotation Overlay */}
-          {!isPdf && documentItem && documentItem.stickyNotes && documentItem.stickyNotes.map(note => (
+          {documentItem && documentItem.stickyNotes && documentItem.stickyNotes.map(note => (
             <StickyNoteCard
               key={note.id}
               note={note}

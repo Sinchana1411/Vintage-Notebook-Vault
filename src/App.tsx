@@ -35,10 +35,34 @@ export default function App() {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [activeItemType, setActiveItemType] = useState<'document' | 'page' | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isDbLoading, setIsDbLoading] = useState(true);
 
   // Drag-resizable sidebar functionality
   const [sidebarWidth, setSidebarWidth] = useState<number>(320);
   const [isDraggingSidebar, setIsDraggingSidebar] = useState<boolean>(false);
+
+  // Load from IndexedDB on startup
+  useEffect(() => {
+    let active = true;
+    import('./utils/dbService').then(m => {
+      m.loadWorkspaceFromIndexedDB().then(dbWorkspace => {
+        if (active && dbWorkspace) {
+          setWorkspace(dbWorkspace);
+        }
+        if (active) {
+          setIsDbLoading(false);
+        }
+      }).catch(err => {
+        console.error('Failed to load initially from IndexedDB:', err);
+        if (active) {
+          setIsDbLoading(false);
+        }
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isDraggingSidebar) return;
@@ -60,10 +84,14 @@ export default function App() {
     };
   }, [isDraggingSidebar]);
 
-  // Auto-save to LocalStorage on changes
+  // Auto-save to IndexedDB/LocalStorage on changes
   useEffect(() => {
-    localStorage.setItem('scriptorium_workspace', JSON.stringify(workspace));
-  }, [workspace]);
+    if (!isDbLoading) {
+      import('./utils/dbService').then(m => {
+        m.saveWorkspaceToIndexedDB(workspace);
+      });
+    }
+  }, [workspace, isDbLoading]);
 
   // Set default selected leaf on load/section switch
   useEffect(() => {
