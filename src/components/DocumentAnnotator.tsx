@@ -9,7 +9,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure pdfjs worker to fetch natively instead of relying on iframe base64
 const ver = pdfjsLib.version || '5.7.284';
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ver}/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${ver}/build/pdf.worker.min.mjs`;
 
 interface DocumentAnnotatorProps {
   documentItem: ImportedDocument | null;
@@ -50,6 +50,8 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   const [pdfLoading, setPdfLoading] = useState<boolean>(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const isPdf = documentItem?.fileType === 'pdf';
 
   // Load state from active document item
   useEffect(() => {
@@ -534,43 +536,51 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
       {/* Scrollable Document Area Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e2d6c5] bg-[#fcf8f2] px-6 py-2.5 shadow-2xs">
         {/* Tools */}
-        <div className="flex items-center gap-1">
-          {/* Pen */}
-          <button
-            onClick={() => setActiveTool('pen')}
-            className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
-              activeTool === 'pen' ? 'bg-[#5c4033] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-            }`}
-          >
-            <PenTool className="h-4 w-4" />
-            <span>Iron Pen</span>
-          </button>
+        {isPdf ? (
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 rounded bg-[#8c2522]/10 border border-[#8c2522]/25 px-2.5 py-1 text-[11px] font-bold text-[#8c2522] uppercase tracking-wide">
+              📖 Antique Leaf Viewer
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            {/* Pen */}
+            <button
+              onClick={() => setActiveTool('pen')}
+              className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
+                activeTool === 'pen' ? 'bg-[#5c4033] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+              }`}
+            >
+              <PenTool className="h-4 w-4" />
+              <span>Iron Pen</span>
+            </button>
 
-          {/* Highlighter */}
-          <button
-            onClick={() => setActiveTool('highlighter')}
-            className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
-              activeTool === 'highlighter' ? 'bg-[#c69214] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-            }`}
-          >
-            <Palette className="h-4 w-4" />
-            <span>Highlighter</span>
-          </button>
+            {/* Highlighter */}
+            <button
+              onClick={() => setActiveTool('highlighter')}
+              className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
+                activeTool === 'highlighter' ? 'bg-[#c69214] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+              }`}
+            >
+              <Palette className="h-4 w-4" />
+              <span>Highlighter</span>
+            </button>
 
-          {/* Eraser */}
-          <button
-            onClick={() => setActiveTool('eraser')}
-            className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
-              activeTool === 'eraser' ? 'bg-[#8c2522] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-            }`}
-          >
-            <Eraser className="h-4 w-4" />
-            <span>Clean Eraser</span>
-          </button>
-        </div>
+            {/* Eraser */}
+            <button
+              onClick={() => setActiveTool('eraser')}
+              className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold select-none ${
+                activeTool === 'eraser' ? 'bg-[#8c2522] text-white' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+              }`}
+            >
+              <Eraser className="h-4 w-4" />
+              <span>Clean Eraser</span>
+            </button>
+          </div>
+        )}
 
         {/* Color Palette Selector */}
-        {activeTool === 'pen' && (
+        {!isPdf && activeTool === 'pen' && (
           <div className="flex items-center gap-2 border-l border-[#e2d6c5] pl-3">
             <span className="text-[10px] font-bold text-[#5c4033] uppercase">Ink:</span>
             <div className="flex items-center gap-1.5">
@@ -606,7 +616,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
         )}
 
          {/* Highlighter colors */}
-        {activeTool === 'highlighter' && (
+        {!isPdf && activeTool === 'highlighter' && (
           <div className="flex items-center gap-2 border-l border-[#e2d6c5] pl-3">
             <span className="text-[10px] font-bold text-[#5c4033] uppercase">Tint:</span>
             <div className="flex items-center gap-1.5">
@@ -640,7 +650,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
         )}
 
         {/* Eraser Width Settings Slider */}
-        {activeTool === 'eraser' && (
+        {!isPdf && activeTool === 'eraser' && (
           <div className="flex items-center gap-2 border-l border-[#e2d6c5] pl-3 text-xs animate-in fade-in slide-in-from-top-1">
             <span className="text-[10px] font-bold text-[#5c4033] uppercase">Eraser width:</span>
             <input
@@ -658,70 +668,72 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
         {/* Paper Style controls */}
         <div className="flex items-center gap-3 relative">
           {/* Format config indicators */}
-          <div className="flex items-center gap-1.5 rounded border border-[#ebdcb9] bg-white px-2 py-1 text-xs text-[#5c4033]">
-            <Settings className="h-3.5 w-3.5" />
-            <select
-              value={pageSize}
-              onChange={e => {
-                const s = e.target.value as PageSize;
-                setPageSize(s);
-                onUpdateDocument({ ...documentItem, pageSize: s });
-              }}
-              className="bg-transparent outline-none font-bold"
-            >
-              <option value="Letter">Letter</option>
-              <option value="A4">A4 Size</option>
-              <option value="A5">A5 Scroll</option>
-              <option value="Pocket">Pocket Book</option>
-              <option value="Legal">Legal Scroll</option>
-              <option value="Letter_Landscape">Landscape Letter</option>
-              <option value="A4_Landscape">Landscape A4</option>
-              <option value="Square_Sm">Square Small (600x600)</option>
-              <option value="Square_Lg">Square Large (800x800)</option>
-            </select>
-
-            <select
-              value={paperStyle}
-              onChange={e => {
-                const p = e.target.value as PaperStyle;
-                setPaperStyle(p);
-                onUpdateDocument({ ...documentItem, paperStyle: p });
-              }}
-              className="bg-transparent outline-none font-bold border-l border-[#ebdcb9] pl-1.5"
-            >
-              <option value="unruled">Blank Parchment</option>
-              <option value="ruled">Ruled Sheet</option>
-              <option value="grid">Grid Sheet</option>
-            </select>
-
-            <label className="flex items-center gap-1 border-l border-[#ebdcb9] pl-1.5 cursor-pointer font-bold select-none">
-              <input
-                type="checkbox"
-                checked={hasMargin}
+          {!isPdf && (
+            <div className="flex items-center gap-1.5 rounded border border-[#ebdcb9] bg-white px-2 py-1 text-xs text-[#5c4033]">
+              <Settings className="h-3.5 w-3.5" />
+              <select
+                value={pageSize}
                 onChange={e => {
-                  const m = e.target.checked;
-                  setHasMargin(m);
-                  onUpdateDocument({ ...documentItem, hasMargin: m });
+                  const s = e.target.value as PageSize;
+                  setPageSize(s);
+                  onUpdateDocument({ ...documentItem, pageSize: s });
                 }}
-                className="rounded accent-[#8c2522]"
-              />
-              <span>Margin</span>
-            </label>
-            {hasMargin && (
-              <button
-                type="button"
-                onClick={() => setShowMarginStyles(!showMarginStyles)}
-                className={`ml-1 select-none p-1 rounded-sm border transition-colors ${
-                  showMarginStyles 
-                    ? 'bg-[#5c4033] text-white border-[#5c4033]' 
-                    : 'bg-white text-[#5c4033] border-[#ebdcb9] hover:bg-[#faf4eb]'
-                }`}
-                title="Format Guidelines"
+                className="bg-transparent outline-none font-bold"
               >
-                <Sliders className="h-3 w-3" />
-              </button>
-            )}
-          </div>
+                <option value="Letter">Letter</option>
+                <option value="A4">A4 Size</option>
+                <option value="A5">A5 Scroll</option>
+                <option value="Pocket">Pocket Book</option>
+                <option value="Legal">Legal Scroll</option>
+                <option value="Letter_Landscape">Landscape Letter</option>
+                <option value="A4_Landscape">Landscape A4</option>
+                <option value="Square_Sm">Square Small (600x600)</option>
+                <option value="Square_Lg">Square Large (800x800)</option>
+              </select>
+
+              <select
+                value={paperStyle}
+                onChange={e => {
+                  const p = e.target.value as PaperStyle;
+                  setPaperStyle(p);
+                  onUpdateDocument({ ...documentItem, paperStyle: p });
+                }}
+                className="bg-transparent outline-none font-bold border-l border-[#ebdcb9] pl-1.5"
+              >
+                <option value="unruled">Blank Parchment</option>
+                <option value="ruled">Ruled Sheet</option>
+                <option value="grid">Grid Sheet</option>
+              </select>
+
+              <label className="flex items-center gap-1 border-l border-[#ebdcb9] pl-1.5 cursor-pointer font-bold select-none">
+                <input
+                  type="checkbox"
+                  checked={hasMargin}
+                  onChange={e => {
+                    const m = e.target.checked;
+                    setHasMargin(m);
+                    onUpdateDocument({ ...documentItem, hasMargin: m });
+                  }}
+                  className="rounded accent-[#8c2522]"
+                />
+                <span>Margin</span>
+              </label>
+              {hasMargin && (
+                <button
+                  type="button"
+                  onClick={() => setShowMarginStyles(!showMarginStyles)}
+                  className={`ml-1 select-none p-1 rounded-sm border transition-colors ${
+                    showMarginStyles 
+                      ? 'bg-[#5c4033] text-white border-[#5c4033]' 
+                      : 'bg-white text-[#5c4033] border-[#ebdcb9] hover:bg-[#faf4eb]'
+                  }`}
+                  title="Format Guidelines"
+                >
+                  <Sliders className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Scriptorium Antique Zoom Controls */}
           <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-3 text-xs select-none">
@@ -784,32 +796,36 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           )}
 
           {/* Sticky Notes Button */}
-          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
-            <button
-              type="button"
-              onClick={handleAddStickyNote}
-              disabled={!documentItem}
-              className="flex items-center gap-1 p-1 px-2 pb-1.5 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/25 rounded shadow-xs text-[11px] font-semibold cursor-pointer select-none transition-all disabled:opacity-50"
-              title="Add customizable Sticky Note annotation onto this document"
-            >
-              <span className="text-amber-700">📌</span>
-              <span>Add Sticky Note</span>
-            </button>
-          </div>
+          {!isPdf && (
+            <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
+              <button
+                type="button"
+                onClick={handleAddStickyNote}
+                disabled={!documentItem}
+                className="flex items-center gap-1 p-1 px-2 pb-1.5 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/25 rounded shadow-xs text-[11px] font-semibold cursor-pointer select-none transition-all disabled:opacity-50"
+                title="Add customizable Sticky Note annotation onto this document"
+              >
+                <span className="text-amber-700">📌</span>
+                <span>Add Sticky Note</span>
+              </button>
+            </div>
+          )}
 
           {/* Export to PDF Button */}
-          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
-            <button
-              type="button"
-              onClick={exportToPDF}
-              disabled={!documentItem}
-              className="flex items-center gap-1.5 p-1 px-2.5 pb-1.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
-              title="Export this annotated document strictly in PDF format"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span>Export PDF</span>
-            </button>
-          </div>
+          {!isPdf && (
+            <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
+              <button
+                type="button"
+                onClick={exportToPDF}
+                disabled={!documentItem}
+                className="flex items-center gap-1.5 p-1 px-2.5 pb-1.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
+                title="Export this annotated document strictly in PDF format"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Export PDF</span>
+              </button>
+            </div>
+          )}
 
           {/* Floated Scribe Guidelines Formatting Panel */}
           {hasMargin && showMarginStyles && (
@@ -1068,18 +1084,21 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
             </div>
           )}
 
-          <button
-            onClick={clearCanvas}
-            title="Clean All Pencil Annotations"
-            className="rounded-sm border border-[#e5a2a2] bg-[#fcf8f2] px-2.5 py-1.5 text-xs font-semibold text-red-800 hover:bg-[#e5a2a2]/20"
-          >
-            Clear Draft
-          </button>
+          {/* Clear Draft button */}
+          {!isPdf && (
+            <button
+              onClick={clearCanvas}
+              title="Clean All Pencil Annotations"
+              className="rounded-sm border border-[#e5a2a2] bg-[#fcf8f2] px-2.5 py-1.5 text-xs font-semibold text-red-800 hover:bg-[#e5a2a2]/20"
+            >
+              Clear Draft
+            </button>
+          )}
 
           {/* Import file device btn */}
           <label className="flex items-center gap-1.5 rounded-sm bg-[#5c4033] px-3 py-1.5 text-xs font-bold text-[#fdfbf7] cursor-pointer hover:bg-[#3e2723]">
             <Upload className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Replace PDF</span>
+            <span className="hidden lg:inline">{isPdf ? 'Replace PDF' : 'Replace document'}</span>
             <input
               type="file"
               onChange={handleLocalFileUpload}
@@ -1095,27 +1114,30 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}>
           <div
             id="scroll-paper-body"
-            className={`relative bg-[#fdfbf7] ${sizeClasses[pageSize]} border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 ${
-              draggingId ? 'select-none cursor-grabbing animate-none' : ''
-            }`}
-            style={{
+            className={isPdf 
+              ? "relative bg-transparent flex flex-col transition-all duration-300"
+              : `relative bg-[#fdfbf7] ${sizeClasses[pageSize]} border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 ${
+                  draggingId ? 'select-none cursor-grabbing animate-none' : ''
+                }`
+            }
+            style={isPdf ? { padding: 0 } : {
               paddingLeft: hasMargin && marginSide !== 'right' ? `${marginPositionLeft + 24}px` : '48px',
               paddingRight: hasMargin && marginSide !== 'left' ? `${marginPositionRight + 24}px` : '48px',
               paddingTop: hasMargin && hasHorizontalMargin ? `${marginPositionTop + 24}px` : '48px',
               paddingBottom: hasMargin && hasHorizontalMargin ? `${marginPositionBottom + 48}px` : '64px',
             }}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
+            onPointerMove={isPdf ? undefined : handlePointerMove}
+            onPointerUp={isPdf ? undefined : handlePointerUp}
           >
           {/* Ruling Overlay if matching */}
-          {paperStyle !== 'unruled' && (
+          {!isPdf && paperStyle !== 'unruled' && (
             <div className={`absolute inset-0 pointer-events-none opacity-40 z-0 ${
               paperStyle === 'ruled' ? 'paper-ruled' : 'paper-grid'
             }`} />
           )}
 
           {/* Scribe Guideline Margin Line */}
-          {hasMargin && (
+          {!isPdf && hasMargin && (
             <>
               {/* Left Side line */}
               {marginSide !== 'right' && (
@@ -1213,7 +1235,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           )}
 
           {/* Multiple Custom Guidelines rendering */}
-          {hasMargin && customMargins && customMargins.map(m => {
+          {!isPdf && hasMargin && customMargins && customMargins.map(m => {
             let styleObj: React.CSSProperties = {};
             if (m.type === 'vertical-left') {
               styleObj = { left: `${m.position}px`, width: marginStyle === 'double' ? '6px' : '2px', top: 0, bottom: 0 };
@@ -1267,14 +1289,16 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           })}
 
           {/* Workspace Title */}
-          <div className="relative z-10 mb-6 border-b border-[#ebdcb9] pb-4">
-            <h2 className="font-display text-2xl font-bold text-[#3e2723] uppercase tracking-wide">
-              {documentItem.title}
-            </h2>
-            <p className="text-[10px] text-[#5c4033] font-mono italic">
-              Archived Leaf • Created {new Date(documentItem.createdAt).toLocaleDateString()}
-            </p>
-          </div>
+          {!isPdf && (
+            <div className="relative z-10 mb-6 border-b border-[#ebdcb9] pb-4">
+              <h2 className="font-display text-2xl font-bold text-[#3e2723] uppercase tracking-wide">
+                {documentItem.title}
+              </h2>
+              <p className="text-[10px] text-[#5c4033] font-mono italic">
+                Archived Leaf • Created {new Date(documentItem.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+          )}
 
           {/* Content layer depending on file type */}
           <div className="relative z-10 flex-1 text-sm text-[#333] leading-relaxed select-text font-serif">
@@ -1315,22 +1339,24 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
           </div>
 
           {/* Annotation Canvas Overlay */}
-          <canvas
-            ref={canvasRef}
-            width={850}
-            height={1150}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            onTouchStart={startDrawing}
-            onTouchMove={draw}
-            onTouchEnd={stopDrawing}
-            className="absolute inset-0 w-full h-full z-20 cursor-crosshair select-none"
-          />
+          {!isPdf && (
+            <canvas
+              ref={canvasRef}
+              width={850}
+              height={1150}
+              onMouseDown={startDrawing}
+              onMouseMove={draw}
+              onMouseUp={stopDrawing}
+              onMouseLeave={stopDrawing}
+              onTouchStart={startDrawing}
+              onTouchMove={draw}
+              onTouchEnd={stopDrawing}
+              className="absolute inset-0 w-full h-full z-20 cursor-crosshair select-none"
+            />
+          )}
 
           {/* Draggable Sticky Notes Annotation Overlay */}
-          {documentItem && documentItem.stickyNotes && documentItem.stickyNotes.map(note => (
+          {!isPdf && documentItem && documentItem.stickyNotes && documentItem.stickyNotes.map(note => (
             <StickyNoteCard
               key={note.id}
               note={note}
