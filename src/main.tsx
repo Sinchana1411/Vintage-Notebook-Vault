@@ -8,3 +8,17 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+// Register Progressive Web App Service Worker
+if ('serviceWorker' in navigator && (import.meta as any).env?.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('Scriptorium ServiceWorker registration successful with scope: ', registration.scope);
+      })
+      .catch((error) => {
+        console.error('Scriptorium ServiceWorker registration failed: ', error);
+      });
+  });
+}
+
