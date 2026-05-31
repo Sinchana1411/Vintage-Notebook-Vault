@@ -192,226 +192,305 @@ export function StickyNoteCard({ note, onUpdate, onDelete }: StickyNoteCardProps
         />
       </div>
 
-      {/* On Hover / Selected Controls Deck */}
-      {(showConfig || isSelected) && (
-        <div className="flex flex-col items-center gap-1 absolute -bottom-12 left-1/2 -translate-x-1/2 z-55">
-          {/* Format Sub-Panel (renders when format menu toggle is enabled) */}
-          {showFormatMenu && (
-            <div className="note-controls flex items-center gap-1 bg-[#2d1b18] text-amber-50 text-[9px] py-1 px-2.5 rounded-full shadow-md animate-in slide-in-from-bottom border border-[#4a3531] whitespace-nowrap">
-              {/* Font Family buttons */}
-              <div className="flex items-center gap-0.5 border-r border-[#4a3531] pr-1.5">
+      {/* On Hover Helper for Unselected Notes */}
+      {showConfig && !isSelected && (
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#3e2723] text-amber-100 text-[8px] font-sans font-semibold uppercase tracking-wider py-0.5 px-2 rounded shadow border border-amber-600/20 whitespace-nowrap pointer-events-none z-50 animate-bounce">
+          🖱️ Click note to customize
+        </div>
+      )}
+
+      {/* Viewport-Fixed Full Scribe Customization bar when Selected */}
+      {isSelected && (
+        <div 
+          className="note-controls fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] flex flex-col items-center gap-2 bg-[#2d1b18] text-amber-50 text-[11px] p-3 md:p-3.5 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.8)] border-2 border-amber-600/40 select-none animate-in slide-in-from-bottom duration-300 pointer-events-auto"
+          style={{ width: 'max-content', maxWidth: 'calc(100vw - 32px)' }}
+          onMouseDown={(e) => {
+            // Prevent editor container losing focus / click-away triggers
+            e.stopPropagation();
+          }}
+        >
+          {/* Header indicator bar */}
+          <div className="flex items-center justify-between w-full border-b border-[#4a3531]/80 pb-1.5 mb-0.5">
+            <span className="text-[10px] uppercase font-sans tracking-widest text-amber-200/90 font-bold flex items-center gap-1.5">
+              <span>✍️</span> Vintage Note Customizer
+              <span className="text-[8px] px-1.5 py-0.5 bg-amber-505/10 bg-[#3d2420] text-amber-300 rounded font-mono uppercase tracking-normal">
+                {note.shape}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsSelected(false);
+              }}
+              className="text-[9px] uppercase font-sans tracking-wide bg-stone-700/60 hover:bg-stone-600 hover:text-white px-2 py-0.5 rounded text-amber-100/90 cursor-pointer transition-colors"
+            >
+              Done
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Typography Styles */}
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[8px] uppercase tracking-wider text-stone-400 font-sans">Font Scribe</span>
+              <div className="flex items-center gap-0.5 bg-black/25 p-1 rounded border border-[#4a3531]">
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { fontFamily: 'cursive' })}
-                  className={`p-0.5 px-1 rounded uppercase font-bold text-[7px] cursor-pointer hover:bg-stone-700 ${(!note.fontFamily || note.fontFamily === 'cursive') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Cursive Font"
+                  className={`p-1 px-1.5 rounded uppercase font-bold text-[8px] cursor-pointer hover:bg-stone-700 ${(!note.fontFamily || note.fontFamily === 'cursive') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Elegant Cursive Font"
                 >
                   Cur
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { fontFamily: 'serif' })}
-                  className={`p-0.5 px-1 rounded uppercase font-bold text-[7px] cursor-pointer hover:bg-stone-700 ${(note.fontFamily === 'serif') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Classic Serif"
+                  className={`p-1 px-1.5 rounded uppercase font-bold text-[8px] cursor-pointer hover:bg-stone-700 ${(note.fontFamily === 'serif') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Classic Serif Font"
                 >
                   Ser
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { fontFamily: 'sans' })}
-                  className={`p-0.5 px-1 rounded uppercase font-bold text-[7px] cursor-pointer hover:bg-stone-700 ${(note.fontFamily === 'sans') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Modern Sans"
+                  className={`p-1 px-1.5 rounded uppercase font-bold text-[8px] cursor-pointer hover:bg-stone-700 ${(note.fontFamily === 'sans') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Modern Sans Font"
                 >
                   San
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { fontFamily: 'mono' })}
-                  className={`p-0.5 px-1 rounded uppercase font-bold text-[7px] cursor-pointer hover:bg-stone-700 ${(note.fontFamily === 'mono') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Monospace srv"
+                  className={`p-1 px-1.5 rounded uppercase font-bold text-[8px] cursor-pointer hover:bg-stone-700 ${(note.fontFamily === 'mono') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Scribe Monospace"
                 >
                   Mon
                 </button>
               </div>
+            </div>
 
-              {/* Bold, Italic, Underline Font Style Modifiers */}
-              <div className="flex items-center gap-0.5 border-r border-[#4a3531] pr-1.5">
+            {/* Formatting Modifiers */}
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[8px] uppercase tracking-wider text-stone-400 font-sans">Emphasis</span>
+              <div className="flex items-center gap-0.5 bg-black/25 p-1 rounded border border-[#4a3531]">
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { isBold: !note.isBold })}
-                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${note.isBold ? 'bg-amber-500 text-[#2d1b18] font-bold' : ''}`}
-                  title="Bold Style"
+                  className={`p-1 rounded cursor-pointer hover:bg-stone-700 ${note.isBold ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Bold Text Style"
                 >
-                  <Bold className="h-2.5 w-2.5" />
+                  <Bold className="h-3 w-3" />
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { isItalic: !note.isItalic })}
-                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${note.isItalic ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Italic Style"
+                  className={`p-1 rounded cursor-pointer hover:bg-stone-700 ${note.isItalic ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Italic Text Style"
                 >
-                  <Italic className="h-2.5 w-2.5" />
+                  <Italic className="h-3 w-3" />
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { isUnderline: !note.isUnderline })}
-                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${note.isUnderline ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Underline Style"
+                  className={`p-1 rounded cursor-pointer hover:bg-stone-700 ${note.isUnderline ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Underline Text Style"
                 >
-                  <Underline className="h-2.5 w-2.5" />
+                  <Underline className="h-3 w-3" />
                 </button>
               </div>
+            </div>
 
-              {/* Text Alignments */}
-              <div className="flex items-center gap-0.5 border-r border-[#4a3531] pr-1.5">
+            {/* Alignments */}
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[8px] uppercase tracking-wider text-stone-400 font-sans">Align</span>
+              <div className="flex items-center gap-0.5 bg-black/25 p-1 rounded border border-[#4a3531]">
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { textAlign: 'left' })}
-                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${(note.textAlign === 'left') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Align Left"
+                  className={`p-1 rounded cursor-pointer hover:bg-stone-700 ${(note.textAlign === 'left') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Align Text Left"
                 >
-                  <AlignLeft className="h-2.5 w-2.5" />
+                  <AlignLeft className="h-3 w-3" />
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { textAlign: 'center' })}
-                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${(note.textAlign === 'center' || (!note.textAlign && note.shape === 'circle')) ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Align Center"
+                  className={`p-1 rounded cursor-pointer hover:bg-stone-700 ${(note.textAlign === 'center' || (!note.textAlign && note.shape === 'circle')) ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Align Text Center"
                 >
-                  <AlignCenter className="h-2.5 w-2.5" />
+                  <AlignCenter className="h-3 w-3" />
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { textAlign: 'right' })}
-                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${(note.textAlign === 'right') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Align Right"
+                  className={`p-1 rounded cursor-pointer hover:bg-stone-700 ${(note.textAlign === 'right') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Align Text Right"
                 >
-                  <AlignRight className="h-2.5 w-2.5" />
+                  <AlignRight className="h-3 w-3" />
                 </button>
               </div>
+            </div>
 
-              {/* Text Sizing Scale */}
-              <div className="flex items-center gap-1">
+            {/* Text Font Size */}
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[8px] uppercase tracking-wider text-stone-400 font-sans">Text Size</span>
+              <div className="flex items-center gap-0.5 bg-black/25 p-1 rounded border border-[#4a3531]">
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { fontSize: 'sm' })}
-                  className={`p-0.5 px-1 rounded uppercase text-[6px] font-bold cursor-pointer hover:bg-stone-700 ${(note.fontSize === 'sm') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Small typography"
+                  className={`p-1 px-1.5 rounded uppercase text-[7px] font-bold cursor-pointer hover:bg-stone-700 ${(note.fontSize === 'sm') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Small Font Size"
                 >
                   sm
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { fontSize: 'base' })}
-                  className={`p-0.5 px-1 rounded uppercase text-[6px] font-bold cursor-pointer hover:bg-stone-700 ${(!note.fontSize || note.fontSize === 'base') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Regular font"
+                  className={`p-1 px-1.5 rounded uppercase text-[7px] font-bold cursor-pointer hover:bg-stone-700 ${(!note.fontSize || note.fontSize === 'base') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Normal Font Size"
                 >
                   rg
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { fontSize: 'lg' })}
-                  className={`p-0.5 px-1 rounded uppercase text-[6px] font-bold cursor-pointer hover:bg-stone-700 ${(note.fontSize === 'lg') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Large typography"
+                  className={`p-1 px-1.5 rounded uppercase text-[7px] font-bold cursor-pointer hover:bg-stone-700 ${(note.fontSize === 'lg') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Large Font Size"
                 >
                   lg
                 </button>
                 <button
                   type="button"
                   onClick={() => onUpdate(note.id, { fontSize: 'xl' })}
-                  className={`p-0.5 px-1 rounded uppercase text-[6px] font-bold cursor-pointer hover:bg-stone-700 ${(note.fontSize === 'xl') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
-                  title="Extra Large typography"
+                  className={`p-1 px-1.5 rounded uppercase text-[7px] font-bold cursor-pointer hover:bg-stone-700 ${(note.fontSize === 'xl') ? 'bg-amber-500 text-[#2d1b18]' : 'text-stone-300'}`}
+                  title="Extra Large Font Size"
                 >
                   xl
                 </button>
               </div>
             </div>
-          )}
 
-          {/* Primary Operations Deck */}
-          <div className="note-controls flex items-center gap-1.5 bg-[#3e2723] text-stone-200 text-[10px] py-1 px-2.5 rounded-full shadow-lg border border-[#52352e] whitespace-nowrap">
-            {/* Colors palette */}
-            <div className="flex items-center gap-0.5 border-r border-stone-600 pr-1.5 h-4">
-              {colors.map(col => (
-                <button
-                  key={col.value}
-                  type="button"
-                  onClick={() => onUpdate(note.id, { color: col.value })}
-                  className={`w-2.5 h-2.5 rounded-full border border-stone-800 ${col.dot} hover:scale-110 active:scale-95 transition-transform cursor-pointer`}
-                  title={col.label}
-                />
-              ))}
+            {/* Shapes customization */}
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[8px] uppercase tracking-wider text-stone-400 font-sans">Shape</span>
+              <div className="flex items-center gap-0.5 bg-black/25 p-1 rounded border border-[#4a3531]">
+                {shapes.map(sh => (
+                  <button
+                    key={sh}
+                    type="button"
+                    onClick={() => handleShapeChange(sh)}
+                    className={`p-1 px-2 rounded uppercase text-[8px] font-bold cursor-pointer hover:bg-stone-700 transition-all ${
+                      note.shape === sh ? 'bg-[#8c2522] text-[#fdfbf7] font-extrabold shadow' : 'text-stone-300'
+                    }`}
+                    title={`Transform note to ${sh}`}
+                  >
+                    {sh[0].toUpperCase() + sh.slice(1, 3)}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Shapes selector */}
-            <div className="flex items-center gap-1 border-r border-stone-600 pr-1.5 h-4">
-              {shapes.map(sh => (
-                <button
-                  key={sh}
-                  type="button"
-                  onClick={() => handleShapeChange(sh)}
-                  className={`p-0.5 rounded uppercase hover:bg-stone-700 hover:text-white px-1 leading-none text-[8px] font-bold cursor-pointer ${
-                    note.shape === sh ? 'bg-[#8c2522] text-white font-extrabold' : ''
-                  }`}
-                  title={`Make ${sh}`}
-                >
-                  {sh[0]}
-                </button>
-              ))}
+            {/* Real-time Dimensions Adjusters */}
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[8px] uppercase tracking-wider text-stone-400 font-sans">Custom Dimensions</span>
+              <div className="flex items-center gap-1.5 bg-black/25 p-1 rounded border border-[#4a3531]">
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] tracking-normal text-stone-400 font-sans">W:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newWidth = Math.max(100, note.width - 20);
+                      const newHeight = note.shape === 'circle' ? newWidth : note.height;
+                      onUpdate(note.id, { width: newWidth, height: newHeight });
+                    }}
+                    className="w-4.5 h-4.5 flex items-center justify-center bg-stone-700 hover:bg-stone-600 rounded text-[9px] font-bold cursor-pointer"
+                    title="Shrink Width by 20px"
+                  >
+                    -
+                  </button>
+                  <span className="text-[8px] w-5 text-center font-mono font-bold text-amber-200">{note.width}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newWidth = Math.min(450, note.width + 20);
+                      const newHeight = note.shape === 'circle' ? newWidth : note.height;
+                      onUpdate(note.id, { width: newWidth, height: newHeight });
+                    }}
+                    className="w-4.5 h-4.5 flex items-center justify-center bg-stone-700 hover:bg-stone-600 rounded text-[9px] font-bold cursor-pointer"
+                    title="Grow Width by 20px"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {note.shape !== 'circle' && (
+                  <div className="flex items-center gap-1 pl-1.5 border-l border-[#4a3531]">
+                    <span className="text-[8px] tracking-normal text-stone-400 font-sans">H:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newHeight = Math.max(80, note.height - 20);
+                        onUpdate(note.id, { height: newHeight });
+                      }}
+                      className="w-4.5 h-4.5 flex items-center justify-center bg-stone-700 hover:bg-stone-600 rounded text-[9px] font-bold cursor-pointer"
+                      title="Shrink Height by 20px"
+                    >
+                      -
+                    </button>
+                    <span className="text-[8px] w-5 text-center font-mono font-bold text-amber-200">{note.height}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newHeight = Math.min(450, note.height + 20);
+                        onUpdate(note.id, { height: newHeight });
+                      }}
+                      className="w-4.5 h-4.5 flex items-center justify-center bg-stone-700 hover:bg-stone-600 rounded text-[9px] font-bold cursor-pointer"
+                      title="Grow Height by 20px"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Typing / Formatting toggle */}
-            <div className="border-r border-stone-600 pr-1.5 h-4 flex items-center">
-              <button
-                type="button"
-                onClick={() => setShowFormatMenu(!showFormatMenu)}
-                className={`p-0.5 rounded hover:bg-stone-700 hover:text-white cursor-pointer transition-colors ${
-                  showFormatMenu ? 'bg-amber-400 text-stone-900 font-bold' : 'text-stone-300'
-                }`}
-                title="Scribe Typography Formatting"
-              >
-                <Type className="h-3 w-3" />
-              </button>
+            {/* Colors Palette */}
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-[8px] uppercase tracking-wider text-stone-400 font-sans">Color Palette</span>
+              <div className="flex items-center gap-1 bg-black/25 p-1 rounded border border-[#4a3531]">
+                {colors.map(col => {
+                  const isColorSelected = note.color === col.value;
+                  return (
+                    <button
+                      key={col.value}
+                      type="button"
+                      onClick={() => onUpdate(note.id, { color: col.value })}
+                      className={`w-4 h-4 rounded-full border border-stone-800 ${col.dot} hover:scale-125 focus:ring-1 focus:ring-amber-500 transition-all cursor-pointer ${
+                        isColorSelected ? 'ring-2 ring-amber-400 scale-110' : ''
+                      }`}
+                      title={col.label}
+                    />
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Sizing Toggles */}
-            <div className="flex items-center gap-0.5 border-r border-stone-600 pr-1.5 h-4 text-stone-300">
+            {/* Discard Node Button */}
+            <div className="flex flex-col items-start justify-center pt-3.5">
               <button
                 type="button"
                 onClick={() => {
-                  const newWidth = Math.max(100, note.width - 20);
-                  const newHeight = note.shape === 'circle' ? newWidth : Math.max(80, note.height - 20);
-                  onUpdate(note.id, { width: newWidth, height: newHeight });
+                  if (confirm("Are you sure you wish to scrap this active sticky note scribbling?")) {
+                    onDelete(note.id);
+                  }
                 }}
-                className="px-1 hover:bg-stone-700 rounded text-[9px] font-bold cursor-pointer"
-                title="Shrink note"
+                className="p-1 px-2.5 bg-red-950/40 text-red-300 hover:bg-red-900/80 hover:text-white border border-red-900/60 rounded-lg cursor-pointer flex items-center justify-center gap-1 transition-all"
+                title="Discard Sticky Note"
               >
-                -
-              </button>
-              <span className="text-[7px] text-stone-400">Size</span>
-              <button
-                type="button"
-                onClick={() => {
-                  const newWidth = Math.min(350, note.width + 20);
-                  const newHeight = note.shape === 'circle' ? newWidth : Math.min(300, note.height + 20);
-                  onUpdate(note.id, { width: newWidth, height: newHeight });
-                }}
-                className="px-1 hover:bg-stone-700 rounded text-[9px] font-bold cursor-pointer"
-                title="Expand note"
-              >
-                +
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="text-[9px] tracking-wide uppercase font-bold font-sans">Scrap</span>
               </button>
             </div>
-
-            {/* Delete Button */}
-            <button
-              type="button"
-              onClick={() => onDelete(note.id)}
-              className="p-0.5 hover:bg-red-900 rounded text-red-400 hover:text-red-300 transition-colors cursor-pointer"
-              title="Scribble archive delete"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
           </div>
         </div>
       )}
