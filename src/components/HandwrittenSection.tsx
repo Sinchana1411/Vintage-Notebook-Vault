@@ -7,6 +7,14 @@ import { Notepaper, PageSize, PaperStyle, TableData, ShapeElement, CustomMargin 
 import { colorClassMap } from './TextNotesSection';
 import { StickyNotesSectionLayer, StickyNoteCard } from './StickyNoteOverlay';
 
+interface DrawingStroke {
+  id: string;
+  tool: 'pen' | 'calligraphy' | 'pencil' | 'eraser' | 'highlighter';
+  color: string;
+  size: number;
+  points: Array<{ x: number; y: number }>;
+}
+
 interface HandwrittenSectionProps {
   pageItem: Notepaper | null;
   onUpdatePage: (updated: Notepaper) => void;
@@ -34,6 +42,10 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [isTopPanelOpen, setIsTopPanelOpen] = useState<boolean>(true);
   const [isBottomPanelOpen, setIsBottomPanelOpen] = useState<boolean>(true);
+
+  // Vector strokes handling
+  const [strokes, setStrokes] = useState<DrawingStroke[]>([]);
+  const currentStrokeRef = useRef<DrawingStroke | null>(null);
 
   // Embedded overlays
   const [localTables, setLocalTables] = useState<TableData[]>([]);
@@ -103,15 +115,31 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
       const sizeDef = sizePixels[mappedSize];
       setCustomWidth((pageItem as any).customWidth || sizeDef.width);
       setCustomHeight((pageItem as any).customHeight || sizeDef.height);
+
+      // Load stroke data for precise vector eraser functionality
+      if (pageItem.strokeData) {
+        try {
+          const parsed = JSON.parse(pageItem.strokeData);
+          if (Array.isArray(parsed)) {
+            setStrokes(parsed);
+          } else {
+            setStrokes([]);
+          }
+        } catch {
+          setStrokes([]);
+        }
+      } else {
+        setStrokes([]);
+      }
     }
-  }, [pageItem?.id, pageItem?.pageSize, (pageItem as any)?.customWidth, (pageItem as any)?.customHeight]);
+  }, [pageItem?.id, pageItem?.pageSize, (pageItem as any)?.customWidth, (pageItem as any)?.customHeight, pageItem?.strokeData]);
 
   // Robust sync load canvas drawing and scale it neatly on change of layout size or shape
   useEffect(() => {
     if (pageItem) {
       loadCanvasDrawings();
     }
-  }, [pageItem?.id, pageSize, customWidth, customHeight, pageItem?.drawingsData]);
+  }, [pageItem?.id, pageSize, customWidth, customHeight, pageItem?.drawingsData, strokes]);
 
   const savePageChanges = (updates: Partial<Notepaper>) => {
     if (!pageItem) return;
@@ -255,6 +283,103 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
     }
   };
 
+  const drawStroke = (ctx: CanvasRenderingContext2D, stroke: DrawingStroke) => {
+    if (stroke.points.length < 1) return;
+    ctx.save();
+
+    if (stroke.points.length === 1) {
+      ctx.beginPath();
+      ctx.fillStyle = stroke.tool === 'highlighter' ? 'rgba(255, 235, 59, 0.35)' : stroke.color;
+      ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.size / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    ctx.beginPath();
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+
+    if (stroke.tool === 'pencil') {
+      ctx.globalCompositeOperation = 'source-over';
+      const actualColor = stroke.color === '#1a2d54' ? 'rgba(50, 70, 110, 0.45)' : stroke.color + '55';
+      ctx.strokeStyle = actualColor;
+      ctx.lineWidth = stroke.size * 0.8;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.shadowBlur = 1.8;
+      ctx.shadowColor = actualColor;
+
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      for (let i = 1; i < stroke.points.length; i++) {
+        const p1 = stroke.points[i - 1];
+        const p2 = stroke.points[i];
+        const midPointX = (p1.x + p2.x) / 2;
+        const midPointY = (p1.y + p2.y) / 2;
+        ctx.quadraticCurveTo(p1.x, p1.y, midPointX, midPointY);
+        ctx.lineTo(p2.x, p2.y);
+      }
+      ctx.stroke();
+    } else if (stroke.tool === 'calligraphy') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size * 1.5;
+      ctx.lineCap = 'square';
+      ctx.lineJoin = 'miter';
+      ctx.shadowBlur = 0.6;
+      ctx.shadowColor = stroke.color;
+
+      ctx.moveTo(stroke.points[0].x - 3, stroke.points[0].y - 3);
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx.lineTo(stroke.points[i].x - 3, stroke.points[i].y - 3);
+      }
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+      }
+      ctx.stroke();
+    } else if (stroke.tool === 'highlighter') {
+      ctx.globalCompositeOperation = 'source-over';
+      const highlightColor = 'rgba(255, 235, 59, 0.45)';
+      ctx.strokeStyle = highlightColor;
+      ctx.lineWidth = 18;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+      }
+      ctx.stroke();
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.shadowBlur = 1.0;
+      ctx.shadowColor = stroke.color;
+
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      for (let i = 1; i < stroke.points.length; i++) {
+        const p1 = stroke.points[i - 1];
+        const p2 = stroke.points[i];
+        const midPointX = (p1.x + p2.x) / 2;
+        const midPointY = (p1.y + p2.y) / 2;
+        ctx.quadraticCurveTo(p1.x, p1.y, midPointX, midPointY);
+        ctx.lineTo(p2.x, p2.y);
+      }
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  };
+
   const loadCanvasDrawings = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -262,7 +387,11 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (pageItem?.drawingsData) {
+    if (strokes.length > 0) {
+      strokes.forEach(stroke => {
+        drawStroke(ctx, stroke);
+      });
+    } else if (pageItem?.drawingsData) {
       const img = new Image();
       img.src = pageItem.drawingsData;
       img.onload = () => {
@@ -295,135 +424,42 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
     };
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const eraseStrokeAtPoint = (x: number, y: number) => {
+    let strokeRemoved = false;
+    const updatedStrokes = strokes.filter(stroke => {
+      const isHit = stroke.points.some(p => {
+        const dist = Math.sqrt((p.x - x) ** 2 + (p.y - y) ** 2);
+        const hitRadius = Math.max(12, eraserSize / 2);
+        return dist <= hitRadius;
+      });
+      if (isHit) {
+        strokeRemoved = true;
+      }
+      return !isHit;
+    });
 
-    // Save previous drawing state for undo before drawing starts
-    const currentData = pageItem?.drawingsData || '';
-    setUndoHistory(prev => [...prev, currentData]);
-    setRedoHistory([]); // Restores empty redo queue on next user strokes
-
-    const { x, y } = getCoordinates(e);
-    setIsDrawing(true);
-    setLastPos({ x, y });
+    if (strokeRemoved) {
+      setStrokes(updatedStrokes);
+      saveCanvasDataWithStrokes(updatedStrokes);
+    }
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+  const saveCanvasDataWithStrokes = (newStrokes: DrawingStroke[]) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !pageItem) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const { x, y } = getCoordinates(e);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    newStrokes.forEach(stroke => {
+      drawStroke(ctx, stroke);
+    });
 
-    ctx.beginPath();
-
-    if (activeTool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = eraserSize;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.moveTo(lastPos.x, lastPos.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    } else if (activeTool === 'pencil') {
-      // Chalky greyed style with lower alpha and soft feathered edge
-      ctx.globalCompositeOperation = 'source-over';
-      const actualColor = penColor === '#1a2d54' ? 'rgba(50, 70, 110, 0.45)' : penColor + '55';
-      ctx.strokeStyle = actualColor;
-      ctx.lineWidth = penSize * 0.8;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      
-      // Feathered soft edge
-      ctx.shadowBlur = 1.8;
-      ctx.shadowColor = actualColor;
-
-      // Quadratic outline curve for smooth flowing paths
-      ctx.moveTo(lastPos.x, lastPos.y);
-      const midPointX = (lastPos.x + x) / 2;
-      const midPointY = (lastPos.y + y) / 2;
-      ctx.quadraticCurveTo(lastPos.x, lastPos.y, midPointX, midPointY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    } else if (activeTool === 'calligraphy') {
-      // Calligraphy flat brush angle effect
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = penColor;
-      ctx.lineWidth = penSize * 1.5;
-      ctx.lineCap = 'square';
-      ctx.lineJoin = 'miter';
-      
-      // Fine shadow blur to soften pixelated diagonal steps
-      ctx.shadowBlur = 0.6;
-      ctx.shadowColor = penColor;
-
-      // Drawing calligraphy nib angle lines
-      ctx.moveTo(lastPos.x - 3, lastPos.y - 3);
-      ctx.lineTo(x - 3, y - 3);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(lastPos.x, lastPos.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    } else if (activeTool === 'highlighter') {
-      ctx.globalCompositeOperation = 'source-over';
-      const highlightColor = 'rgba(255, 235, 59, 0.35)';
-      ctx.strokeStyle = highlightColor;
-      ctx.lineWidth = 18;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      
-      // Clean marker bounds
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
-
-      ctx.moveTo(lastPos.x, lastPos.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    } else {
-      // Classic metal core ink pen - with curve interpolation and soft edges
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = penColor;
-      ctx.lineWidth = penSize;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      
-      // Fluid ink anti-aliased soft edges
-      ctx.shadowBlur = 1.0;
-      ctx.shadowColor = penColor;
-
-      // Quadratic curve interpolation
-      ctx.moveTo(lastPos.x, lastPos.y);
-      const midPointX = (lastPos.x + x) / 2;
-      const midPointY = (lastPos.y + y) / 2;
-      ctx.quadraticCurveTo(lastPos.x, lastPos.y, midPointX, midPointY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    }
-
-    // Reset shadow values to make sure other elements dont bleed
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
-
-    setLastPos({ x, y });
-  };
-
-  const stopDrawing = () => {
-    if (!isDrawing) return;
-    setIsDrawing(false);
-    saveCanvasData();
-  };
-
-  const saveCanvasData = () => {
-    const canvas = canvasRef.current;
-    if (!canvas || !pageItem) return;
     const dataUrl = canvas.toDataURL();
     onUpdatePage({
       ...pageItem,
       drawingsData: dataUrl,
+      strokeData: JSON.stringify(newStrokes),
       paperStyle,
       pageSize,
       hasMargin,
@@ -441,82 +477,202 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
     });
   };
 
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const serializedStrokes = JSON.stringify(strokes);
+    setUndoHistory(prev => [...prev, serializedStrokes]);
+    setRedoHistory([]); 
+
+    const { x, y } = getCoordinates(e);
+    setIsDrawing(true);
+    setLastPos({ x, y });
+
+    if (activeTool === 'eraser') {
+      eraseStrokeAtPoint(x, y);
+    } else {
+      const newStroke: DrawingStroke = {
+        id: `stroke-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        tool: activeTool,
+        color: penColor,
+        size: activeTool === 'highlighter' ? 18 : penSize,
+        points: [{ x, y }]
+      };
+      currentStrokeRef.current = newStroke;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        drawStroke(ctx, newStroke);
+      }
+    }
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const { x, y } = getCoordinates(e);
+
+    if (activeTool === 'eraser') {
+      eraseStrokeAtPoint(x, y);
+    } else {
+      if (currentStrokeRef.current) {
+        currentStrokeRef.current.points.push({ x, y });
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+
+        const stroke = currentStrokeRef.current;
+        const len = stroke.points.length;
+        if (len >= 2) {
+          const p1 = stroke.points[len - 2];
+          const p2 = stroke.points[len - 1];
+
+          if (stroke.tool === 'pencil') {
+            const actualColor = stroke.color === '#1a2d54' ? 'rgba(50, 70, 110, 0.45)' : stroke.color + '55';
+            ctx.strokeStyle = actualColor;
+            ctx.lineWidth = stroke.size * 0.8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowBlur = 1.8;
+            ctx.shadowColor = actualColor;
+
+            ctx.moveTo(p1.x, p1.y);
+            const midPointX = (p1.x + p2.x) / 2;
+            const midPointY = (p1.y + p2.y) / 2;
+            ctx.quadraticCurveTo(p1.x, p1.y, midPointX, midPointY);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          } else if (stroke.tool === 'calligraphy') {
+            ctx.strokeStyle = stroke.color;
+            ctx.lineWidth = stroke.size * 1.5;
+            ctx.lineCap = 'square';
+            ctx.lineJoin = 'miter';
+            ctx.shadowBlur = 0.6;
+            ctx.shadowColor = stroke.color;
+
+            ctx.moveTo(p1.x - 3, p1.y - 3);
+            ctx.lineTo(p2.x - 3, p2.y - 3);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          } else if (stroke.tool === 'highlighter') {
+            const highlightColor = 'rgba(255, 235, 59, 0.45)';
+            ctx.strokeStyle = highlightColor;
+            ctx.lineWidth = 18;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          } else {
+            ctx.strokeStyle = stroke.color;
+            ctx.lineWidth = stroke.size;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowBlur = 1.0;
+            ctx.shadowColor = stroke.color;
+
+            ctx.moveTo(p1.x, p1.y);
+            const midPointX = (p1.x + p2.x) / 2;
+            const midPointY = (p1.y + p2.y) / 2;
+            ctx.quadraticCurveTo(p1.x, p1.y, midPointX, midPointY);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+    }
+
+    setLastPos({ x, y });
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+
+    if (activeTool !== 'eraser' && currentStrokeRef.current) {
+      const finishedStroke = currentStrokeRef.current;
+      const updatedStrokes = [...strokes, finishedStroke];
+      setStrokes(updatedStrokes);
+      currentStrokeRef.current = null;
+      saveCanvasDataWithStrokes(updatedStrokes);
+    }
+  };
+
+  const saveCanvasData = () => {
+    saveCanvasDataWithStrokes(strokes);
+  };
+
   const clearCanvasContent = () => {
     const canvas = canvasRef.current;
     if (!canvas || !pageItem) return;
 
-    // Save state for undo before clearing
-    const currentData = pageItem.drawingsData || '';
-    setUndoHistory(prev => [...prev, currentData]);
-    setRedoHistory([]); // Restores empty redo queue on clear
+    const serializedStrokes = JSON.stringify(strokes);
+    setUndoHistory(prev => [...prev, serializedStrokes]);
+    setRedoHistory([]);
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setStrokes([]);
+    
     onUpdatePage({
       ...pageItem,
       drawingsData: '',
+      strokeData: '[]',
     });
   };
 
   const handleUndo = () => {
-    if (undoHistory.length === 0) return;
+    if (undoHistory.length === 0 || !pageItem) return;
 
-    const previousData = undoHistory[undoHistory.length - 1];
+    const previousSerializedStrokes = undoHistory[undoHistory.length - 1];
     setUndoHistory(prev => prev.slice(0, -1));
 
-    // Save current state for redo
-    const currentData = pageItem?.drawingsData || '';
-    setRedoHistory(prev => [...prev, currentData]);
+    const currentSerializedStrokes = JSON.stringify(strokes);
+    setRedoHistory(prev => [...prev, currentSerializedStrokes]);
 
-    const canvas = canvasRef.current;
-    if (!canvas || !pageItem) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (previousData) {
-      const img = new Image();
-      img.src = previousData;
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      };
+    let parsedStrokes: DrawingStroke[] = [];
+    try {
+      parsedStrokes = JSON.parse(previousSerializedStrokes);
+    } catch {
+      parsedStrokes = [];
     }
 
-    onUpdatePage({
-      ...pageItem,
-      drawingsData: previousData
-    });
+    setStrokes(parsedStrokes);
+    saveCanvasDataWithStrokes(parsedStrokes);
   };
 
   const handleRedo = () => {
-    if (redoHistory.length === 0) return;
+    if (redoHistory.length === 0 || !pageItem) return;
 
-    const nextData = redoHistory[redoHistory.length - 1];
+    const nextSerializedStrokes = redoHistory[redoHistory.length - 1];
     setRedoHistory(prev => prev.slice(0, -1));
 
-    // Save current state for undo before applying redo
-    const currentData = pageItem?.drawingsData || '';
-    setUndoHistory(prev => [...prev, currentData]);
+    const currentSerializedStrokes = JSON.stringify(strokes);
+    setUndoHistory(prev => [...prev, currentSerializedStrokes]);
 
-    const canvas = canvasRef.current;
-    if (!canvas || !pageItem) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (nextData) {
-      const img = new Image();
-      img.src = nextData;
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      };
+    let parsedStrokes: DrawingStroke[] = [];
+    try {
+      parsedStrokes = JSON.parse(nextSerializedStrokes);
+    } catch {
+      parsedStrokes = [];
     }
 
-    onUpdatePage({
-      ...pageItem,
-      drawingsData: nextData
-    });
+    setStrokes(parsedStrokes);
+    saveCanvasDataWithStrokes(parsedStrokes);
   };
 
   // Same feature: Inserting custom grids tables in handwriting
