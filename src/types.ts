@@ -113,6 +113,12 @@ export interface StickyNote {
   color: string; // background Tailwind class or hex color
   shape: 'square' | 'rectangle' | 'circle';
   createdAt: number;
+  isBold?: boolean;
+  isItalic?: boolean;
+  isUnderline?: boolean;
+  fontFamily?: 'cursive' | 'serif' | 'sans' | 'mono';
+  textAlign?: 'left' | 'center' | 'right';
+  fontSize?: 'sm' | 'base' | 'lg' | 'xl';
 }
 
 export interface Notepaper {

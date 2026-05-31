@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Pin, Layers, Minimize2, Move, Type } from 'lucide-react';
+import { Trash2, Pin, Layers, Minimize2, Move, Type, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { StickyNote } from '../types';
 
 interface StickyNoteCardProps {
@@ -14,7 +14,37 @@ export function StickyNoteCard({ note, onUpdate, onDelete }: StickyNoteCardProps
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [showConfig, setShowConfig] = useState(false);
   const [isSelected, setIsSelected] = useState(false);
+  const [showFormatMenu, setShowFormatMenu] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
+
+  // Font-style calculators
+  const getFontFamily = () => {
+    switch (note.fontFamily) {
+      case 'serif':
+        return "var(--font-serif), 'EB Garamond', Georgia, serif";
+      case 'sans':
+        return "system-ui, -apple-system, sans-serif";
+      case 'mono':
+        return "var(--font-mono), 'Fira Code', monospace";
+      case 'cursive':
+      default:
+        return "var(--font-cursive), 'Alex Brush', cursive";
+    }
+  };
+
+  const getFontSize = () => {
+    switch (note.fontSize) {
+      case 'sm':
+        return note.fontFamily === 'cursive' ? '12px' : '11px';
+      case 'lg':
+        return note.fontFamily === 'cursive' ? '20px' : '16px';
+      case 'xl':
+        return note.fontFamily === 'cursive' ? '26px' : '20px';
+      case 'base':
+      default:
+        return note.fontFamily === 'cursive' ? '16px' : '13px';
+    }
+  };
 
   // Focus and click-away listeners
   useEffect(() => {
@@ -150,82 +180,239 @@ export function StickyNoteCard({ note, onUpdate, onDelete }: StickyNoteCardProps
           onChange={handleTextChange}
           onFocus={() => setIsSelected(true)}
           placeholder="Type reminder here..."
-          className={`w-full h-full bg-transparent resize-none border-none outline-none focus:ring-0 text-xs text-inherit placeholder:text-stone-400 font-serif leading-relaxed ${
-            note.shape === 'circle' ? 'text-center' : 'text-left'
-          }`}
+          className="w-full h-full bg-transparent resize-none border-none outline-none focus:ring-0 text-inherit placeholder:text-stone-400 leading-relaxed"
           style={{
-            fontFamily: "var(--font-cursive), 'Alex Brush', cursive",
-            fontSize: note.shape === 'circle' ? '14px' : '15px'
+            fontFamily: getFontFamily(),
+            fontSize: getFontSize(),
+            fontWeight: note.isBold ? 'bold' : 'normal',
+            fontStyle: note.isItalic ? 'italic' : 'normal',
+            textDecoration: note.isUnderline ? 'underline' : 'none',
+            textAlign: note.textAlign || (note.shape === 'circle' ? 'center' : 'left'),
           }}
         />
       </div>
 
       {/* On Hover / Selected Controls Deck */}
       {(showConfig || isSelected) && (
-        <div className="note-controls absolute -bottom-11 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-[#3e2723] text-stone-200 text-[10px] py-1 px-2.5 rounded-full shadow-lg z-50 animate-fade-in font-sans">
-          {/* Colors palette */}
-          <div className="flex items-center gap-0.5 border-r border-stone-600 pr-1.5 h-4">
-            {colors.map(col => (
-              <button
-                key={col.value}
-                onClick={() => onUpdate(note.id, { color: col.value })}
-                className={`w-2.5 h-2.5 rounded-full border border-stone-800 ${col.dot} hover:scale-110 active:scale-95 transition-transform`}
-                title={col.label}
-              />
-            ))}
-          </div>
+        <div className="flex flex-col items-center gap-1 absolute -bottom-12 left-1/2 -translate-x-1/2 z-55">
+          {/* Format Sub-Panel (renders when format menu toggle is enabled) */}
+          {showFormatMenu && (
+            <div className="note-controls flex items-center gap-1 bg-[#2d1b18] text-amber-50 text-[9px] py-1 px-2.5 rounded-full shadow-md animate-in slide-in-from-bottom border border-[#4a3531] whitespace-nowrap">
+              {/* Font Family buttons */}
+              <div className="flex items-center gap-0.5 border-r border-[#4a3531] pr-1.5">
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { fontFamily: 'cursive' })}
+                  className={`p-0.5 px-1 rounded uppercase font-bold text-[7px] cursor-pointer hover:bg-stone-700 ${(!note.fontFamily || note.fontFamily === 'cursive') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Cursive Font"
+                >
+                  Cur
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { fontFamily: 'serif' })}
+                  className={`p-0.5 px-1 rounded uppercase font-bold text-[7px] cursor-pointer hover:bg-stone-700 ${(note.fontFamily === 'serif') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Classic Serif"
+                >
+                  Ser
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { fontFamily: 'sans' })}
+                  className={`p-0.5 px-1 rounded uppercase font-bold text-[7px] cursor-pointer hover:bg-stone-700 ${(note.fontFamily === 'sans') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Modern Sans"
+                >
+                  San
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { fontFamily: 'mono' })}
+                  className={`p-0.5 px-1 rounded uppercase font-bold text-[7px] cursor-pointer hover:bg-stone-700 ${(note.fontFamily === 'mono') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Monospace srv"
+                >
+                  Mon
+                </button>
+              </div>
 
-          {/* Shapes selector */}
-          <div className="flex items-center gap-1 border-r border-stone-600 pr-1.5 h-4">
-            {shapes.map(sh => (
+              {/* Bold, Italic, Underline Font Style Modifiers */}
+              <div className="flex items-center gap-0.5 border-r border-[#4a3531] pr-1.5">
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { isBold: !note.isBold })}
+                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${note.isBold ? 'bg-amber-500 text-[#2d1b18] font-bold' : ''}`}
+                  title="Bold Style"
+                >
+                  <Bold className="h-2.5 w-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { isItalic: !note.isItalic })}
+                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${note.isItalic ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Italic Style"
+                >
+                  <Italic className="h-2.5 w-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { isUnderline: !note.isUnderline })}
+                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${note.isUnderline ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Underline Style"
+                >
+                  <Underline className="h-2.5 w-2.5" />
+                </button>
+              </div>
+
+              {/* Text Alignments */}
+              <div className="flex items-center gap-0.5 border-r border-[#4a3531] pr-1.5">
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { textAlign: 'left' })}
+                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${(note.textAlign === 'left') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Align Left"
+                >
+                  <AlignLeft className="h-2.5 w-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { textAlign: 'center' })}
+                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${(note.textAlign === 'center' || (!note.textAlign && note.shape === 'circle')) ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Align Center"
+                >
+                  <AlignCenter className="h-2.5 w-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { textAlign: 'right' })}
+                  className={`p-0.5 rounded cursor-pointer hover:bg-stone-700 ${(note.textAlign === 'right') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Align Right"
+                >
+                  <AlignRight className="h-2.5 w-2.5" />
+                </button>
+              </div>
+
+              {/* Text Sizing Scale */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { fontSize: 'sm' })}
+                  className={`p-0.5 px-1 rounded uppercase text-[6px] font-bold cursor-pointer hover:bg-stone-700 ${(note.fontSize === 'sm') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Small typography"
+                >
+                  sm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { fontSize: 'base' })}
+                  className={`p-0.5 px-1 rounded uppercase text-[6px] font-bold cursor-pointer hover:bg-stone-700 ${(!note.fontSize || note.fontSize === 'base') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Regular font"
+                >
+                  rg
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { fontSize: 'lg' })}
+                  className={`p-0.5 px-1 rounded uppercase text-[6px] font-bold cursor-pointer hover:bg-stone-700 ${(note.fontSize === 'lg') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Large typography"
+                >
+                  lg
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(note.id, { fontSize: 'xl' })}
+                  className={`p-0.5 px-1 rounded uppercase text-[6px] font-bold cursor-pointer hover:bg-stone-700 ${(note.fontSize === 'xl') ? 'bg-amber-500 text-[#2d1b18]' : ''}`}
+                  title="Extra Large typography"
+                >
+                  xl
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Primary Operations Deck */}
+          <div className="note-controls flex items-center gap-1.5 bg-[#3e2723] text-stone-200 text-[10px] py-1 px-2.5 rounded-full shadow-lg border border-[#52352e] whitespace-nowrap">
+            {/* Colors palette */}
+            <div className="flex items-center gap-0.5 border-r border-stone-600 pr-1.5 h-4">
+              {colors.map(col => (
+                <button
+                  key={col.value}
+                  type="button"
+                  onClick={() => onUpdate(note.id, { color: col.value })}
+                  className={`w-2.5 h-2.5 rounded-full border border-stone-800 ${col.dot} hover:scale-110 active:scale-95 transition-transform cursor-pointer`}
+                  title={col.label}
+                />
+              ))}
+            </div>
+
+            {/* Shapes selector */}
+            <div className="flex items-center gap-1 border-r border-stone-600 pr-1.5 h-4">
+              {shapes.map(sh => (
+                <button
+                  key={sh}
+                  type="button"
+                  onClick={() => handleShapeChange(sh)}
+                  className={`p-0.5 rounded uppercase hover:bg-stone-700 hover:text-white px-1 leading-none text-[8px] font-bold cursor-pointer ${
+                    note.shape === sh ? 'bg-[#8c2522] text-white font-extrabold' : ''
+                  }`}
+                  title={`Make ${sh}`}
+                >
+                  {sh[0]}
+                </button>
+              ))}
+            </div>
+
+            {/* Typing / Formatting toggle */}
+            <div className="border-r border-stone-600 pr-1.5 h-4 flex items-center">
               <button
-                key={sh}
-                onClick={() => handleShapeChange(sh)}
-                className={`p-0.5 rounded uppercase hover:bg-stone-700 hover:text-white px-1 leading-none text-[8px] font-bold ${
-                  note.shape === sh ? 'bg-[#8c2522] text-white font-extrabold' : ''
+                type="button"
+                onClick={() => setShowFormatMenu(!showFormatMenu)}
+                className={`p-0.5 rounded hover:bg-stone-700 hover:text-white cursor-pointer transition-colors ${
+                  showFormatMenu ? 'bg-amber-400 text-stone-900 font-bold' : 'text-stone-300'
                 }`}
-                title={`Make ${sh}`}
+                title="Scribe Typography Formatting"
               >
-                {sh[0]}
+                <Type className="h-3 w-3" />
               </button>
-            ))}
-          </div>
+            </div>
 
-          {/* Sizing Toggles */}
-          <div className="flex items-center gap-0.5 border-r border-stone-600 pr-1.5 h-4 text-stone-300">
+            {/* Sizing Toggles */}
+            <div className="flex items-center gap-0.5 border-r border-stone-600 pr-1.5 h-4 text-stone-300">
+              <button
+                type="button"
+                onClick={() => {
+                  const newWidth = Math.max(100, note.width - 20);
+                  const newHeight = note.shape === 'circle' ? newWidth : Math.max(80, note.height - 20);
+                  onUpdate(note.id, { width: newWidth, height: newHeight });
+                }}
+                className="px-1 hover:bg-stone-700 rounded text-[9px] font-bold cursor-pointer"
+                title="Shrink note"
+              >
+                -
+              </button>
+              <span className="text-[7px] text-stone-400">Size</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const newWidth = Math.min(350, note.width + 20);
+                  const newHeight = note.shape === 'circle' ? newWidth : Math.min(300, note.height + 20);
+                  onUpdate(note.id, { width: newWidth, height: newHeight });
+                }}
+                className="px-1 hover:bg-stone-700 rounded text-[9px] font-bold cursor-pointer"
+                title="Expand note"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Delete Button */}
             <button
-              onClick={() => {
-                const newWidth = Math.max(100, note.width - 20);
-                const newHeight = note.shape === 'circle' ? newWidth : Math.max(80, note.height - 20);
-                onUpdate(note.id, { width: newWidth, height: newHeight });
-              }}
-              className="px-1 hover:bg-stone-700 rounded text-[9px] font-bold"
-              title="Shrink note"
+              type="button"
+              onClick={() => onDelete(note.id)}
+              className="p-0.5 hover:bg-red-900 rounded text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+              title="Scribble archive delete"
             >
-              -
-            </button>
-            <span className="text-[7px] text-stone-400">Size</span>
-            <button
-              onClick={() => {
-                const newWidth = Math.min(350, note.width + 20);
-                const newHeight = note.shape === 'circle' ? newWidth : Math.min(300, note.height + 20);
-                onUpdate(note.id, { width: newWidth, height: newHeight });
-              }}
-              className="px-1 hover:bg-stone-700 rounded text-[9px] font-bold"
-              title="Expand note"
-            >
-              +
+              <Trash2 className="h-3 w-3" />
             </button>
           </div>
-
-          {/* Delete Button */}
-          <button
-            onClick={() => onDelete(note.id)}
-            className="p-0.5 hover:bg-red-900 rounded text-red-400 hover:text-red-300 transition-colors"
-            title="Scribble archive delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
         </div>
       )}
     </div>
