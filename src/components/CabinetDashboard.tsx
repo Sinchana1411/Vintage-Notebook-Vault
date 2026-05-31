@@ -5,7 +5,6 @@ import {
   X, Calendar, Edit3, Trash2, Library, BookOpen, Settings, Filter
 } from 'lucide-react';
 import { VintageWorkspaceData, Folder, Notebook, Chapter, Notepaper, ImportedDocument } from '../types';
-import { StickyNotesSectionLayer } from './StickyNoteOverlay';
 
 interface CabinetDashboardProps {
   workspace: VintageWorkspaceData;
@@ -35,40 +34,6 @@ export default function CabinetDashboard({
   onDeleteNode,
   onUpdateWorkspace
 }: CabinetDashboardProps) {
-  const handleAddStickyNote = () => {
-    const newNote = {
-      id: `sticky-${Date.now()}`,
-      text: '',
-      x: 350 + ((workspace.dashboardStickyNotes?.length || 0) * 15),
-      y: 110 + ((workspace.dashboardStickyNotes?.length || 0) * 15),
-      width: 160,
-      height: 160,
-      color: 'bg-[#fef9c3] border-[#fef08a] text-yellow-950',
-      shape: 'square' as const,
-      createdAt: Date.now()
-    };
-    onUpdateWorkspace({
-      ...workspace,
-      dashboardStickyNotes: [...(workspace.dashboardStickyNotes || []), newNote]
-    });
-  };
-
-  const handleUpdateStickyNote = (id: string, updates: Partial<any>) => {
-    onUpdateWorkspace({
-      ...workspace,
-      dashboardStickyNotes: (workspace.dashboardStickyNotes || []).map(note =>
-        note.id === id ? { ...note, ...updates } : note
-      )
-    });
-  };
-
-  const handleDeleteStickyNote = (id: string) => {
-    onUpdateWorkspace({
-      ...workspace,
-      dashboardStickyNotes: (workspace.dashboardStickyNotes || []).filter(note => note.id !== id)
-    });
-  };
-
   const [activeTab, setActiveTab] = useState<'cabinet' | 'all-files'>('cabinet');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
@@ -246,16 +211,8 @@ export default function CabinetDashboard({
           </p>
         </div>
 
-        {/* Dashboard tabs with sticky note adder */}
+        {/* Dashboard tabs */}
         <div className="flex items-center gap-3 self-stretch md:self-auto flex-wrap">
-          <StickyNotesSectionLayer
-            notes={workspace.dashboardStickyNotes}
-            onAddNote={handleAddStickyNote}
-            onUpdateNote={handleUpdateStickyNote}
-            onDeleteNote={handleDeleteStickyNote}
-            sectionLabel="Dashboard"
-          />
-
           <div className="flex items-center gap-2 bg-[#fcf8f2] p-1.5 rounded border border-[#ebdcb9] text-xs">
             <button
               onClick={() => setActiveTab('cabinet')}
