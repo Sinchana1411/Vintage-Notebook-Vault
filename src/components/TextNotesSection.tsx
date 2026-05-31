@@ -64,6 +64,8 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [customWidth, setCustomWidth] = useState<number>(800);
   const [customHeight, setCustomHeight] = useState<number>(1131);
+  const [isTopPanelOpen, setIsTopPanelOpen] = useState<boolean>(true);
+  const [isBottomPanelOpen, setIsBottomPanelOpen] = useState<boolean>(true);
 
   const sizePixels: Record<PageSize, { width: number; height: number }> = {
     Portrait: { width: 800, height: 1131 },
@@ -591,9 +593,10 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
   ];
 
   return (
-    <div className="flex flex-1 flex-col bg-[#faf4eb] overflow-hidden font-serif">
+    <div className="relative flex flex-1 flex-col bg-[#faf4eb] overflow-hidden font-serif">
       {/* RICH TEXT RIBBON TOOLBAR & CONTROLS */}
-      <div className="relative z-30 flex flex-wrap items-center justify-between gap-y-2 border-b border-[#e2d6c5] bg-[#fcf8f2] px-6 py-2 shadow-2xs">
+      {isTopPanelOpen && (
+        <div className="relative z-30 flex flex-wrap items-center justify-between gap-y-2 border-b border-[#e2d6c5] bg-[#fcf8f2] px-6 py-2 shadow-2xs">
         
         {/* Style selection */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
@@ -854,63 +857,15 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
 
         </div>
 
-          {/* Scriptorium Antique Zoom Controls */}
-          <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-3 text-xs select-none">
-            <span className="text-[10px] font-bold text-[#5c4033] uppercase font-mono">Zoom:</span>
-            <button
-              type="button"
-              onClick={() => setZoom(prev => Math.max(0.5, Number((prev - 0.1).toFixed(1))))}
-              className="p-1 rounded bg-[#faf4eb] hover:bg-[#ebdcb9] border border-[#ebdcb9]/60 font-bold hover:scale-105 active:scale-95 transition-all w-6 h-6 flex items-center justify-center text-xs text-[#5c4033] cursor-pointer"
-              title="Zoom Out"
-            >
-              -
-            </button>
-            <span className="font-mono text-[11px] text-[#5c4033] min-w-[34px] text-center font-bold">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              type="button"
-              onClick={() => setZoom(prev => Math.min(2.5, Number((prev + 0.1).toFixed(1))))}
-              className="p-1 rounded bg-[#faf4eb] hover:bg-[#ebdcb9] border border-[#ebdcb9]/60 font-bold hover:scale-105 active:scale-95 transition-all w-6 h-6 flex items-center justify-center text-xs text-[#5c4033] cursor-pointer"
-              title="Zoom In"
-            >
-              +
-            </button>
-            <button
-              type="button"
-              onClick={() => setZoom(1.0)}
-              className="p-1 px-1.5 text-[9px] rounded bg-[#faf4eb] hover:bg-[#ebdcb9] border border-[#ebdcb9]/60 uppercase font-bold text-[#8c2522] cursor-pointer"
-              title="Reset Zoom"
-            >
-              Reset
-            </button>
-          </div>
-
-          {/* Sticky Notes Button */}
+          {/* Hide Toolbar Button */}
           <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
             <button
               type="button"
-              onClick={handleAddStickyNote}
-              disabled={!pageItem}
-              className="flex items-center gap-1 p-1 px-2 pb-1.5 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/25 rounded shadow-xs text-[11px] font-semibold cursor-pointer select-none transition-all disabled:opacity-50"
-              title="Add customizable Sticky Note onto this note page"
+              onClick={() => setIsTopPanelOpen(false)}
+              className="flex items-center gap-1.5 p-1 px-2.5 pb-1 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer transition-all"
+              title="Hide toolbar for full screen focus"
             >
-              <span className="text-amber-700">📌</span>
-              <span>Add Sticky Note</span>
-            </button>
-          </div>
-
-          {/* Export strictly to PDF */}
-          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
-            <button
-              type="button"
-              onClick={exportToPDF}
-              disabled={!pageItem}
-              className="flex items-center gap-1.5 p-1 px-2.5 pb-1.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
-              title="Export this page strictly in PDF format"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span>Export PDF</span>
+              <span>✕ Hide Tools</span>
             </button>
           </div>
 
@@ -1171,52 +1126,8 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
             </div>
           )}
 
-        {/* Element inserters (shapes, charts, tables) */}
-        <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-3">
-          <button
-            onClick={handleInsertTable}
-            className="flex items-center gap-1 rounded bg-[#ffffff] border border-[#ebdcb9] px-2.5 py-1 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb]"
-            title="Insert Structured Table"
-          >
-            <TableIcon className="h-3.5 w-3.5" />
-            <span>Table</span>
-          </button>
-
-          <button
-            onClick={handleInsertChart}
-            className="flex items-center gap-1 rounded bg-[#ffffff] border border-[#ebdcb9] px-2.5 py-1 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb]"
-            title="Insert SVG Vector Chart"
-          >
-            <BarChart3 className="h-3.5 w-3.5" />
-            <span>Chart</span>
-          </button>
-
-          {/* Shape inserters drop-down or shortcuts */}
-          <div className="flex items-center border border-[#ebdcb9] rounded overflow-hidden bg-white">
-            <button
-              onClick={() => handleInsertShape('rectangle')}
-              className="p-1 hover:bg-[#faf4eb] border-r border-[#ebdcb9] text-[#5c4033]"
-              title="Place Sketch Rectangle"
-            >
-              <Square className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => handleInsertShape('circle')}
-              className="p-1 hover:bg-[#faf4eb] border-r border-[#ebdcb9] text-[#5c4033]"
-              title="Place Sketch Circle"
-            >
-              <Circle className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => handleInsertShape('line')}
-              className="p-1 hover:bg-[#faf4eb] text-[#5c4033]"
-              title="Place Underlining Line"
-            >
-              <ChevronsRight className="h-3.5 w-3.5 rotate-90" />
-            </button>
-          </div>
         </div>
-      </div>
+      )}
 
       {/* COMPONENT BODY */}
       <div className="flex-1 overflow-auto p-6 flex justify-center items-start vintage-scroll">
@@ -2314,6 +2225,158 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
         </div>
         </div>
       </div>
+
+      {/* NEW FIXED BOTTOM ACTION BAR / PANEL */}
+      {isBottomPanelOpen && (
+        <div className="relative z-30 flex flex-wrap items-center justify-between border-t border-[#ebdcb9] bg-[#fcf8f2] px-6 py-2 shadow-sm transition-all animate-in slide-in-from-bottom-2">
+          {/* Left action tools: Sticky Notes, Table, Chart, Shapes */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Sticky Notes Button */}
+            <button
+              type="button"
+              onClick={handleAddStickyNote}
+              disabled={!pageItem}
+              className="flex items-center gap-1.5 p-1 px-3 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/20 rounded shadow-2xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50 animate-in fade-in zoom-in"
+              title="Add customizable Sticky Note onto this note page"
+            >
+              <span className="text-amber-705">📌</span>
+              <span>Add Sticky Note</span>
+            </button>
+
+            {/* Table Cell Embedder */}
+            <button
+              onClick={handleInsertTable}
+              disabled={!pageItem}
+              className="flex items-center gap-1.5 rounded bg-white border border-[#ebdcb9] px-2.5 py-1 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb] shadow-2xs cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Insert Structured Table"
+            >
+              <TableIcon className="h-3.5 w-3.5 text-[#5c4033]" />
+              <span>Table</span>
+            </button>
+
+            {/* Chart Embedder */}
+            <button
+              onClick={handleInsertChart}
+              disabled={!pageItem}
+              className="flex items-center gap-1.5 rounded bg-white border border-[#ebdcb9] px-2.5 py-1 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb] shadow-2xs cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Insert SVG Vector Chart"
+            >
+              <BarChart3 className="h-3.5 w-3.5 text-[#5c4033]" />
+              <span>Chart</span>
+            </button>
+
+            {/* Shape Overlay Spawners */}
+            <div className="flex items-center border border-[#ebdcb9] rounded overflow-hidden bg-white shadow-2xs">
+              <button
+                onClick={() => handleInsertShape('rectangle')}
+                disabled={!pageItem}
+                className="p-1 px-2.5 hover:bg-[#faf4eb] border-r border-[#ebdcb9] text-[#5c4033] cursor-pointer disabled:opacity-50"
+                title="Place Sketch Rectangle"
+              >
+                <Square className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => handleInsertShape('circle')}
+                disabled={!pageItem}
+                className="p-1 px-2.5 hover:bg-[#faf4eb] border-r border-[#ebdcb9] text-[#5c4033] cursor-pointer disabled:opacity-50"
+                title="Place Sketch Circle"
+              >
+                <Circle className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => handleInsertShape('line')}
+                disabled={!pageItem}
+                className="p-1 px-2.5 hover:bg-[#faf4eb] text-[#5c4033] cursor-pointer disabled:opacity-50"
+                title="Place Underlining Line"
+              >
+                <ChevronsRight className="h-3.5 w-3.5 rotate-90" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right action tools: Zoom, Export PDF, and Hide actions panel */}
+          <div className="flex items-center gap-3 flex-wrap text-xs">
+            {/* Scriptorium Antique Zoom Controls */}
+            <div className="flex items-center gap-1.5 border-r border-[#ebdcb9]/40 pr-3 text-xs select-none">
+              <span className="text-[10px] font-bold text-[#5c4033] uppercase font-mono mr-1">Zoom:</span>
+              <button
+                type="button"
+                onClick={() => setZoom(prev => Math.max(0.5, Number((prev - 0.1).toFixed(1))))}
+                className="p-1 rounded bg-[#faf4eb] hover:bg-[#ebdcb9] border border-[#ebdcb9]/60 font-bold hover:scale-105 active:scale-95 transition-all w-6 h-6 flex items-center justify-center text-xs text-[#5c4033] cursor-pointer"
+                title="Zoom Out"
+              >
+                -
+              </button>
+              <span className="font-mono text-[11px] text-[#5c4033] min-w-[34px] text-center font-bold">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoom(prev => Math.min(2.5, Number((prev + 0.1).toFixed(1))))}
+                className="p-1 rounded bg-[#faf4eb] hover:bg-[#ebdcb9] border border-[#ebdcb9]/60 font-bold hover:scale-105 active:scale-95 transition-all w-6 h-6 flex items-center justify-center text-xs text-[#5c4033] cursor-pointer"
+                title="Zoom In"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoom(1.0)}
+                className="p-1 px-1.5 text-[9px] rounded bg-[#faf4eb] hover:bg-[#ebdcb9] border border-[#ebdcb9]/60 uppercase font-bold text-[#8c2522] cursor-pointer ml-1.5"
+                title="Reset Zoom"
+              >
+                Reset
+              </button>
+            </div>
+
+            {/* PDF Downloader export */}
+            <button
+              type="button"
+              onClick={exportToPDF}
+              disabled={!pageItem}
+              className="flex items-center gap-1.5 p-1 px-3 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-2xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Export this page strictly in PDF format"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export PDF</span>
+            </button>
+
+            {/* Collapse Actions Bar */}
+            <div className="border-l border-[#ebdcb9] pl-3">
+              <button
+                type="button"
+                onClick={() => setIsBottomPanelOpen(false)}
+                className="flex items-center gap-1 p-1 px-2.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/20 rounded shadow-2xs text-[11px] font-bold cursor-pointer transition-all"
+                title="Hide bottom actions panel"
+              >
+                <span>✕ Hide Actions</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING ACTION TOGGLES (when panels are minimized) */}
+      {!isTopPanelOpen && (
+        <button
+          onClick={() => setIsTopPanelOpen(true)}
+          className="absolute top-4 right-6 z-45 flex items-center gap-1.5 rounded-full border border-[#ebdcb9] bg-[#3e2723] px-3.5 py-1.5 text-xs font-bold text-[#fdfbf7] shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer animate-in fade-in slide-in-from-top-2"
+          title="Show main toolbar tools"
+        >
+          <Sliders className="h-3.5 w-3.5 animate-pulse" />
+          <span>Show Tools</span>
+        </button>
+      )}
+
+      {!isBottomPanelOpen && (
+        <button
+          onClick={() => setIsBottomPanelOpen(true)}
+          className="absolute bottom-4 right-6 z-45 flex items-center gap-1.5 rounded-full border border-[#ebdcb9] bg-[#3e2723] px-3.5 py-1.5 text-xs font-bold text-[#fdfbf7] shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer animate-in fade-in slide-in-from-bottom-2"
+          title="Show bottom action controls"
+        >
+          <TableIcon className="h-3.5 w-3.5 animate-pulse" />
+          <span>Show Actions</span>
+        </button>
+      )}
     </div>
   );
 }
