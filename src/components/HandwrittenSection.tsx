@@ -32,6 +32,8 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
   const [showMarginStyles, setShowMarginStyles] = useState<boolean>(false);
   const [customMargins, setCustomMargins] = useState<CustomMargin[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [isTopPanelOpen, setIsTopPanelOpen] = useState<boolean>(true);
+  const [isBottomPanelOpen, setIsBottomPanelOpen] = useState<boolean>(true);
 
   // Embedded overlays
   const [localTables, setLocalTables] = useState<TableData[]>([]);
@@ -602,9 +604,10 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-[#faf4eb] overflow-hidden font-serif">
+    <div className="relative flex flex-1 flex-col bg-[#faf4eb] overflow-hidden font-serif">
       {/* HANDWRITING COMPONENT WORKBENCH RIBBON OVERLAYS */}
-      <div className="relative z-30 flex flex-wrap items-center justify-between gap-y-1 gap-x-4 border-b border-[#ebdcb9] bg-[#fcf8f2] px-6 py-1 shadow-2xs">
+      {isTopPanelOpen && (
+        <div className="relative z-30 flex flex-wrap items-center justify-between gap-y-1 gap-x-4 border-b border-[#ebdcb9] bg-[#fcf8f2] px-6 py-1.5 shadow-2xs">
         
         {/* Style selection */}
         <div className="flex items-center gap-1">
@@ -723,37 +726,6 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
 
         {/* Dynamic Canvas custom settings page styles */}
         <div className="flex flex-col gap-1.5 text-xs relative select-none">
-          {/* Keep the undo/redo button row ABOVE the page shape changing slot */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleUndo}
-              disabled={undoHistory.length === 0}
-              className={`flex items-center gap-1.5 rounded px-2.5 py-1 font-bold transition-all cursor-pointer border text-[11px] ${
-                undoHistory.length > 0
-                  ? 'bg-red-50 border-[#8c2522] text-[#8c2522] hover:bg-red-100 shadow-2xs'
-                  : 'bg-[#faf4eb] border-[#ebdcb9]/60 text-[#5c4033]/40 cursor-not-allowed opacity-60'
-              }`}
-              title="Undo last stroke"
-            >
-              <span className="text-sm">↩</span>
-              <span>Undo Stroke</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleRedo}
-              disabled={redoHistory.length === 0}
-              className={`flex items-center gap-1.5 rounded px-2.5 py-1 font-bold transition-all cursor-pointer border text-[11px] ${
-                redoHistory.length > 0
-                  ? 'bg-red-50 border-[#8c2522] text-[#8c2522] hover:bg-red-100 shadow-2xs'
-                  : 'bg-[#faf4eb] border-[#ebdcb9]/60 text-[#5c4033]/40 cursor-not-allowed opacity-60'
-              }`}
-              title="Redo last stroke"
-            >
-              <span>Redo Stroke</span>
-              <span className="text-sm">↪</span>
-            </button>
-          </div>
 
           {/* The page shape slot itself */}
           <div className="flex flex-wrap items-center gap-1.5 rounded border border-[#ebdcb9] bg-white px-2.5 py-1.5 text-[#5c4033]">
@@ -929,31 +901,15 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
             </button>
           </div>
 
-          {/* Sticky Notes Button */}
+          {/* Hide Toolbar Button */}
           <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
             <button
               type="button"
-              onClick={handleAddStickyNote}
-              disabled={!pageItem}
-              className="flex items-center gap-1 p-1 px-2 pb-1.5 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/25 rounded shadow-xs text-[11px] font-semibold cursor-pointer select-none transition-all disabled:opacity-50"
-              title="Add customizable Sticky Note onto this note page"
+              onClick={() => setIsTopPanelOpen(false)}
+              className="flex items-center gap-1.5 p-1 px-2.5 pb-1 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer transition-all"
+              title="Hide toolbar for full screen focus"
             >
-              <span className="text-amber-700">📌</span>
-              <span>Add Sticky Note</span>
-            </button>
-          </div>
-
-          {/* Export strictly to PDF */}
-          <div className="border-l border-[#ebdcb9] pl-3 h-full flex items-center">
-            <button
-              type="button"
-              onClick={exportToPDF}
-              disabled={!pageItem}
-              className="flex items-center gap-1.5 p-1 px-2.5 pb-1.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
-              title="Export this page strictly in PDF format"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span>Export PDF</span>
+              <span>✕ Hide Tools</span>
             </button>
           </div>
 
@@ -1214,60 +1170,8 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
             </div>
           )}
 
-          <button
-            onClick={clearCanvasContent}
-            className="rounded border border-[#e5a2a2] bg-[#fcf8f2] px-2.5 py-1.5 text-xs font-semibold text-red-800 hover:bg-[#e5a2a2]/20"
-          >
-            Clear Sheet
-          </button>
-
-          {/* Undo Annotations Button */}
-          <button
-            onClick={handleUndo}
-            disabled={undoHistory.length === 0}
-            title="Undo last annotation stroke"
-            className="rounded border border-[#ebdcb9] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb] disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer select-none"
-          >
-            <span className="text-sm">↩</span>
-            <span>Undo Stroke</span>
-          </button>
-
-        {/* Feature: inserting shapes & tables into Handwriting workspace */}
-        <div className="flex items-center gap-1.5 border-l border-[#ebdcb9] pl-3">
-          <button
-            onClick={handleInsertTable}
-            className="flex items-center gap-1.5 rounded bg-white border border-[#ebdcb9] px-2 py-1 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb]"
-            title="Embed tables element onto Canvas margins"
-          >
-            <Grid className="h-3 w-3" />
-            <span>Table Cell</span>
-          </button>
-
-          <div className="flex items-center border border-[#ebdcb9] rounded overflow-hidden bg-white">
-            <button
-              onClick={() => handleInsertShape('rectangle')}
-              className="p-1 hover:bg-[#faf4eb] border-r border-[#ebdcb9] text-[#5c4033]"
-              title="Add Rectangle Grid Bounds"
-            >
-              <Square className="h-3 w-3" />
-            </button>
-            <button
-              onClick={() => handleInsertShape('circle')}
-              className="p-1 hover:bg-[#faf4eb] border-r border-[#ebdcb9] text-[#5c4033]"
-              title="Add Circle Element"
-            >
-              <Circle className="h-3 w-3" />
-            </button>
-            <button
-              onClick={() => handleInsertShape('line')}
-              className="p-1 hover:bg-[#faf4eb] text-[#5c4033]"
-              title="Add straight horizontal segment"
-            >
-              <ChevronRight className="h-3 w-3 rotate-90" />
-            </button>
-          </div>
         </div>
-      </div>
+      )}
 
       {/* COMPONENT DRAWWORKSPACE */}
       <div className="flex-1 overflow-auto px-6 pt-2 pb-6 flex justify-center items-start vintage-scroll">
@@ -1641,6 +1545,146 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
         </div>
         </div>
       </div>
+
+      {/* NEW FIXED BOTTOM ACTION BAR / PANEL */}
+      {isBottomPanelOpen && (
+        <div className="relative z-30 flex flex-wrap items-center justify-between border-t border-[#ebdcb9] bg-[#fcf8f2] px-6 py-2 shadow-sm transition-all animate-in slide-in-from-bottom-2">
+          {/* Left action tools: Sticky Notes, Grid Table, Shapes */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Sticky Notes Button */}
+            <button
+              type="button"
+              onClick={handleAddStickyNote}
+              disabled={!pageItem}
+              className="flex items-center gap-1.5 p-1 px-3 bg-amber-500/10 border border-amber-600/30 text-amber-900 hover:bg-amber-500/20 rounded shadow-2xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50 animate-in fade-in zoom-in"
+              title="Add customizable Sticky Note onto this note page"
+            >
+              <span className="text-amber-705">📌</span>
+              <span>Add Sticky Note</span>
+            </button>
+
+            {/* Table Cell Embedder */}
+            <button
+              onClick={handleInsertTable}
+              disabled={!pageItem}
+              className="flex items-center gap-1.5 rounded bg-white border border-[#ebdcb9] px-2.5 py-1 text-xs font-semibold text-[#5c4033] hover:bg-[#faf4eb] shadow-2xs cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Embed tables element onto Canvas margins"
+            >
+              <Grid className="h-3.5 w-3.5 text-[#5c4033]" />
+              <span>Table Cell</span>
+            </button>
+
+            {/* Shape Overlay Spawners */}
+            <div className="flex items-center border border-[#ebdcb9] rounded overflow-hidden bg-white shadow-2xs">
+              <button
+                onClick={() => handleInsertShape('rectangle')}
+                disabled={!pageItem}
+                className="p-1 px-2.5 hover:bg-[#faf4eb] border-r border-[#ebdcb9] text-[#5c4033] cursor-pointer disabled:opacity-50"
+                title="Add Rectangle Grid Bounds"
+              >
+                <Square className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => handleInsertShape('circle')}
+                disabled={!pageItem}
+                className="p-1 px-2.5 hover:bg-[#faf4eb] border-r border-[#ebdcb9] text-[#5c4033] cursor-pointer disabled:opacity-50"
+                title="Add Circle Element"
+              >
+                <Circle className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => handleInsertShape('line')}
+                disabled={!pageItem}
+                className="p-1 px-2.5 hover:bg-[#faf4eb] text-[#5c4033] cursor-pointer disabled:opacity-50"
+                title="Add straight horizontal segment"
+              >
+                <ChevronRight className="h-3.5 w-3.5 rotate-90" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right action tools: Undo/Redo Stroke, Clear Canvas, Export PDF, and Hide actions panel */}
+          <div className="flex items-center gap-3 flex-wrap text-xs">
+            {/* Undo Stream Segment */}
+            <div className="flex items-center rounded overflow-hidden border border-[#ebdcb9] bg-white shadow-2xs">
+              <button
+                onClick={handleUndo}
+                disabled={undoHistory.length === 0}
+                title="Undo last stroke"
+                className="px-3 py-1 text-xs font-bold text-[#5c4033] hover:bg-[#faf4eb] border-r border-[#ebdcb9] disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer select-none"
+              >
+                <span className="text-sm">↩</span>
+                <span>Undo</span>
+              </button>
+              <button
+                onClick={handleRedo}
+                disabled={redoHistory.length === 0}
+                title="Redo last stroke"
+                className="px-3 py-1 text-xs font-bold text-[#5c4033] hover:bg-[#faf4eb] disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer select-none"
+              >
+                <span>Redo</span>
+                <span className="text-sm">↪</span>
+              </button>
+            </div>
+
+            {/* Clear page sheet */}
+            <button
+              onClick={clearCanvasContent}
+              disabled={!pageItem}
+              className="rounded border border-[#e5a2a2] bg-red-50 text-red-800 px-3 py-1 text-xs font-bold hover:bg-red-100 cursor-pointer disabled:opacity-50 shadow-2xs"
+            >
+              Clear Sheet
+            </button>
+
+            {/* PDF Downloader export */}
+            <button
+              type="button"
+              onClick={exportToPDF}
+              disabled={!pageItem}
+              className="flex items-center gap-1.5 p-1 px-3 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/25 rounded shadow-2xs text-[11px] font-bold cursor-pointer select-none transition-all disabled:opacity-50"
+              title="Export this page strictly in PDF format"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export PDF</span>
+            </button>
+
+            {/* Collapse Actions Bar */}
+            <div className="border-l border-[#ebdcb9] pl-3">
+              <button
+                type="button"
+                onClick={() => setIsBottomPanelOpen(false)}
+                className="flex items-center gap-1 p-1 px-2.5 bg-[#8c2522]/10 border border-[#8c2522]/35 text-[#8c2522] hover:bg-[#8c2522]/20 rounded shadow-2xs text-[11px] font-bold cursor-pointer transition-all"
+                title="Hide bottom actions panel"
+              >
+                <span>✕ Hide Actions</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING ACTION TOGGLES (when panels are minimized) */}
+      {!isTopPanelOpen && (
+        <button
+          onClick={() => setIsTopPanelOpen(true)}
+          className="absolute top-4 right-6 z-40 flex items-center gap-1.5 rounded-full border border-[#ebdcb9] bg-[#3e2723] px-3.5 py-1.5 text-xs font-bold text-[#fdfbf7] shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer animate-in fade-in slide-in-from-top-2"
+          title="Show main toolbar tools"
+        >
+          <Sliders className="h-3.5 w-3.5 animate-pulse" />
+          <span>Show Tools</span>
+        </button>
+      )}
+
+      {!isBottomPanelOpen && (
+        <button
+          onClick={() => setIsBottomPanelOpen(true)}
+          className="absolute bottom-4 right-6 z-45 flex items-center gap-1.5 rounded-full border border-[#ebdcb9] bg-[#3e2723] px-3.5 py-1.5 text-xs font-bold text-[#fdfbf7] shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer animate-in fade-in slide-in-from-bottom-2"
+          title="Show bottom action controls"
+        >
+          <Grid className="h-3.5 w-3.5 animate-pulse" />
+          <span>Show Actions</span>
+        </button>
+      )}
     </div>
   );
 }
