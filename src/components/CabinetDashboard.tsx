@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Folder as FolderIcon, Book, Layers, FileText, PenTool, 
   Search, Plus, Sparkles, Grid, Sliders, ChevronRight, FolderOpen,
-  X, Calendar, Edit3, Trash2, Library, BookOpen, Settings, Filter
+  X, Calendar, Edit3, Trash2, Library, BookOpen, Settings, Filter,
+  CheckSquare, Square, ListTodo, Check
 } from 'lucide-react';
 import { VintageWorkspaceData, Folder, Notebook, Chapter, Notepaper, ImportedDocument } from '../types';
 
@@ -62,6 +63,57 @@ export default function CabinetDashboard({
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderSection, setNewFolderSection] = useState<'text' | 'handwriting' | 'documents'>('text');
+
+  // Study To-Do List States & Sync Handlers
+  const [isTodoOpen, setIsTodoOpen] = useState(false);
+  const [todoInput, setTodoInput] = useState('');
+  const [todos, setTodos] = useState<Array<{ id: string; text: string; completed: boolean; createdAt: number }>>(() => {
+    const stored = localStorage.getItem('scriptorium_cabinet_tasks');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return [];
+      }
+    }
+    // Seed with highly atmospheric, helpful vintage study tasks if none exist!
+    return [
+      { id: 'todo-1', text: 'Apply wax stamp to notebook chapter seals', completed: false, createdAt: Date.now() - 3600000 },
+      { id: 'todo-2', text: 'Ink the reservoir brass fountain pen with obsidian black', completed: false, createdAt: Date.now() - 7200000 },
+      { id: 'todo-3', text: 'Audit loose leather volumes in the filing cabinet', completed: true, createdAt: Date.now() - 10800000 }
+    ];
+  });
+
+  // Keep localStorage in sync
+  useEffect(() => {
+    localStorage.setItem('scriptorium_cabinet_tasks', JSON.stringify(todos));
+  }, [todos]);
+
+  // To-Do Handlers
+  const handleAddTodo = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!todoInput.trim()) return;
+    const newTodo = {
+      id: `todo-${Date.now()}`,
+      text: todoInput.trim(),
+      completed: false,
+      createdAt: Date.now()
+    };
+    setTodos(prev => [...prev, newTodo]);
+    setTodoInput('');
+  };
+
+  const handleToggleTodo = (id: string) => {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  };
+
+  const handleDeleteTodo = (id: string) => {
+    setTodos(prev => prev.filter(t => t.id !== id));
+  };
+
+  const handleClearCompletedTodos = () => {
+    setTodos(prev => prev.filter(t => !t.completed));
+  };
 
   // Cover presets
   const coverColors = [
@@ -212,7 +264,30 @@ export default function CabinetDashboard({
         </div>
 
         {/* Dashboard tabs */}
-        <div className="flex items-center gap-3 self-stretch md:self-auto flex-wrap">
+        <div className="flex items-center gap-3 self-stretch md:self-auto flex-wrap justify-end">
+          <button
+            type="button"
+            onClick={() => setIsTodoOpen(prev => !prev)}
+            className={`flex items-center gap-1.5 py-2 px-3 pb-1.5 rounded font-bold font-sans text-[11px] border shadow-xs transition-all uppercase tracking-wide cursor-pointer active:scale-95 hover:shadow-sm ${
+              isTodoOpen 
+                ? 'bg-amber-700 border-amber-800 text-amber-50' 
+                : 'bg-[#faf4eb] hover:bg-[#f0e7d5] border-[#ebdcb9] text-[#5c4033]'
+            }`}
+            title="Toggle Work Index Scribe Tasks"
+          >
+            <ListTodo className="h-3.5 w-3.5" />
+            <span>Task Ledger</span>
+            {todos.filter(t => !t.completed).length > 0 ? (
+              <span className="bg-[#8c2522] text-[#fdfbf7] rounded-full text-[9px] w-4.5 h-4.5 flex items-center justify-center font-bold font-mono">
+                {todos.filter(t => !t.completed).length}
+              </span>
+            ) : (
+              <span className="bg-[#2e4f3f] text-white rounded-full text-[9px] w-4.5 h-4.5 flex items-center justify-center font-bold">
+                ✓
+              </span>
+            )}
+          </button>
+
           <div className="flex items-center gap-2 bg-[#fcf8f2] p-1.5 rounded border border-[#ebdcb9] text-xs">
             <button
               onClick={() => setActiveTab('cabinet')}
@@ -1150,6 +1225,145 @@ export default function CabinetDashboard({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* STUDY TASK LEDGER CARD / POPUP PAGE */}
+      {isTodoOpen && (
+        <div 
+          id="study-task-ledger-page"
+          className="absolute top-22 right-6 z-[200] w-full max-w-sm bg-[#faf5e6] shadow-[0_12px_40px_rgba(45,30,15,0.25)] border-2 border-[#ebdcb9] rounded-xl overflow-hidden font-serif animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto border-l-8 border-l-[#8c2522]"
+        >
+          {/* Lined paper header */}
+          <div className="bg-[#4d3326] text-amber-50 p-3 flex justify-between items-center select-none border-b border-amber-900/40">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">📜</span>
+              <div className="flex flex-col text-left">
+                <span className="font-sans font-bold text-xs uppercase tracking-wider text-amber-100/90">Scribe's Task List</span>
+                <span className="text-[10px] text-amber-200/60 font-serif italic">Permanent study record</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsTodoOpen(false)}
+              className="p-1.5 hover:bg-white/10 hover:text-white rounded-full transition-colors cursor-pointer text-amber-200/90"
+              title="Close Task Ledger"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Progress bar */}
+          {todos.length > 0 && (
+            <div className="px-5 pt-3 select-none bg-[#faf5e6]">
+              <div className="flex justify-between items-center text-[10px] text-stone-500 font-sans uppercase font-bold tracking-tight mb-1">
+                <span>Completion Status</span>
+                <span>
+                  {todos.filter(t => t.completed).length} of {todos.length} Done ({Math.round((todos.filter(t => t.completed).length / todos.length) * 100)}%)
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-[#f4ebd0] rounded-full overflow-hidden border border-stone-300/30">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-600 to-[#8c2522] transition-all duration-500"
+                  style={{ width: `${(todos.filter(t => t.completed).length / todos.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Custom Lined Paper Container */}
+          <div className="p-5 relative bg-[#faf5e6] pb-4">
+            {/* Red left margin line representing classical ruled sheets */}
+            <div className="absolute top-0 bottom-0 left-[34px] border-l border-red-300/40" />
+
+            {/* Form list container */}
+            <form onSubmit={handleAddTodo} className="flex gap-2 mb-4 relative z-10 w-full pl-6">
+              <input
+                type="text"
+                value={todoInput}
+                onChange={e => setTodoInput(e.target.value)}
+                placeholder="Enter study task here..."
+                maxLength={100}
+                className="flex-1 bg-transparent border-b-2 border-[#ebdcb9] focus:border-[#8c2522] focus:outline-none placeholder-stone-400 font-serif text-[#3e2723] text-sm py-1 pb-0.5 text-left"
+              />
+              <button
+                type="submit"
+                disabled={!todoInput.trim()}
+                className="p-1 px-3 bg-[#8c2522] hover:bg-[#a32e2a] focus:ring-2 focus:ring-amber-500/50 text-white rounded text-xs font-bold font-sans uppercase select-none transition-all disabled:opacity-40 cursor-pointer flex items-center justify-center"
+                title="Add task to index"
+              >
+                <span>Add</span>
+              </button>
+            </form>
+
+            {/* List items with elegant border-b ruled lines styling */}
+            <div className="space-y-1 max-h-56 overflow-y-auto pr-1 relative z-10 vintage-scroll">
+              {todos.length === 0 ? (
+                <div className="text-center py-6 select-none pl-6">
+                  <span className="text-2xl opacity-35 block mb-1 font-sans">📄</span>
+                  <p className="text-xs text-stone-400 italic">No chores recorded on this ledger.</p>
+                </div>
+              ) : (
+                todos.slice().reverse().map(item => (
+                  <div 
+                    key={item.id} 
+                    className="group flex items-center justify-between gap-2.5 py-1.5 border-b border-[#ebdcb9]/40 hover:bg-[#ebdcb9]/15 transition-colors pl-6 rounded-xs"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTodo(item.id)}
+                        className="flex-shrink-0 cursor-pointer text-amber-800 hover:text-[#8c2522] transition-colors"
+                        title={item.completed ? "Mark Uncompleted" : "Mark Completed"}
+                      >
+                        {item.completed ? (
+                          <CheckSquare className="h-4.5 w-4.5 text-[#2e4f3f]" />
+                        ) : (
+                          <Square className="h-4.5 w-4.5 text-stone-400 group-hover:text-amber-800" />
+                        )}
+                      </button>
+                      <span 
+                        onClick={() => handleToggleTodo(item.id)}
+                        className={`text-xs text-left text-[#3e2723] break-words cursor-pointer select-none flex-1 ${
+                          item.completed 
+                            ? 'line-through opacity-45 italic decoration-[#8c2522]/50 text-stone-500' 
+                            : 'font-medium'
+                        }`}
+                      >
+                        {item.text}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTodo(item.id)}
+                      className="p-1 hover:bg-red-50 text-stone-400 hover:text-red-600 rounded transition-colors"
+                      title="Scrap Chore"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Action Footer footer buttons */}
+          {todos.length > 0 && (
+            <div className="bg-[#f5edd7] p-2.5 px-4 flex justify-between items-center text-[10px] font-sans text-stone-500 select-none border-t border-[#ebdcb9]">
+              <span className="uppercase font-bold tracking-tight">Active Tasks: {todos.filter(t => !t.completed).length}</span>
+              {todos.some(t => t.completed) && (
+                <button
+                  type="button"
+                  onClick={handleClearCompletedTodos}
+                  className="px-2 py-1 bg-white/70 hover:bg-[#8c2522] hover:text-white border border-[#ebdcb9] rounded hover:border-[#8c2522] text-[#8c2522] font-bold uppercase transition-all cursor-pointer"
+                  title="Wipe completed index"
+                >
+                  Clear Done
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
