@@ -568,189 +568,232 @@ export default function CabinetDashboard({
                   )
                 )}
                 
-                {/* Wood ledge shadowing */}
-                <div className="h-6 w-full bg-gradient-to-b from-[#2a170d] to-[#1a0f08] border-t border-[#462817]" />
+              {/* Wood ledge shadowing */}
+              <div className="h-6 w-full bg-gradient-to-b from-[#2a170d] to-[#1a0f08] border-t border-[#462817]" />
+            </div>
+          </div>
+        )}
+
+        {/* Notebook Contents Detail & Settings (rendered below the folder list or drawer shelves) */}
+        {activeNotebook && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#faf4eb] border border-[#ebdcb9] rounded p-5 shadow mt-6 animate-in slide-in-from-bottom-3 duration-300">
+            <div className="md:col-span-2 space-y-4">
+              <div className="flex justify-between items-center border-b border-[#ebdcb9] pb-2">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-[#8c2522]" />
+                  <h4 className="text-base font-bold text-[#3e2723]">{activeNotebook.name}</h4>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-[#5c4033] font-bold rounded">
+                  Active Chapter-Book Index
+                </span>
               </div>
 
-              {/* Notebook Contents Detail & Settings */}
-              {activeNotebook && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#faf4eb] border border-[#ebdcb9] rounded p-5 shadow">
-                  <div className="md:col-span-2 space-y-4">
-                    <div className="flex justify-between items-center border-b border-[#ebdcb9] pb-2">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5 text-[#8c2522]" />
-                        <h4 className="text-base font-bold text-[#3e2723]">{activeNotebook.name}</h4>
-                      </div>
-                      <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-[#5c4033] font-bold rounded">
-                        Active Chapter-Book Index
-                      </span>
-                    </div>
-
-                    <div className="space-y-3">
-                      {activeNotebookChapters.length === 0 ? (
-                        <div className="py-6 text-center italic text-[#ebdcb9] text-xs">
-                          No chapters or pages added. Click to load notebook on sidebar and start writing!
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {activeNotebookChapters.map(ch => {
-                            const pages = workspace.notepapers.filter(p => p.chapterId === ch.id);
-                            return (
-                              <div key={ch.id} className="border border-[#ebdcb9]/40 rounded p-2 bg-[#fdfbf7]">
-                                <h5 className="text-xs font-bold text-[#8c2522] uppercase tracking-wider">{ch.name}</h5>
-                                {pages.length === 0 ? (
-                                  <span className="text-[10px] text-gray-400 italic block pl-2 mt-1">Empty act</span>
-                                ) : (
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1">
-                                    {pages.map(page => (
-                                      <div 
-                                        key={page.id} 
-                                        onClick={() => onSelectItem(page.id, 'page')}
-                                        className="flex items-center gap-1.5 p-1 px-2 text-[11px] text-[#5c4033] hover:bg-[#ebdcb9]/20 rounded transition-colors cursor-pointer border border-[#ebdcb9]/15"
-                                      >
-                                        <FileText className="h-3 w-3 text-[#a1887f]" />
-                                        <span className="truncate flex-1 font-semibold hover:underline">{page.title}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          // Find first page of active notebook
-                          const firstCh = activeNotebookChapters[0];
-                          if (firstCh) {
-                            const firstPg = workspace.notepapers.find(p => p.chapterId === firstCh.id);
-                            if (firstPg) {
-                              onSelectItem(firstPg.id, 'page');
-                              onSelectSection(activeNotebook.section);
-                              return;
-                            }
-                          }
-                          // Fallback select general section
-                          onSelectSection(activeNotebook.section);
-                        }}
-                        className="flex-1 py-1 px-3 bg-[#8c2522] hover:bg-[#a32e2a] text-white text-xs font-bold rounded transition-colors text-center shadow"
-                      >
-                        📂 Open Journal to Write
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Are you absolutely sure you wish to dissolve and archive this notebook: ${activeNotebook.name}?`)) {
-                            onDeleteNode(activeNotebook.id, 'notebook');
-                            setSelectedNotebookId(null);
-                          }
-                        }}
-                        className="py-1 px-3 bg-[#faf4eb] border border-red-800 text-red-800 hover:bg-red-50 text-xs font-semibold rounded transition-colors"
-                      >
-                        Archive
-                      </button>
-                    </div>
+              <div className="space-y-3">
+                {activeNotebookChapters.length === 0 ? (
+                  <div className="py-6 text-center italic text-[#ebdcb9] text-xs">
+                    No chapters or pages added. Click to load notebook on sidebar and start writing!
                   </div>
-
-                  {/* Visual Cover Modifier (Real-time updates) */}
-                  <div className="p-4 bg-[#fdfbf7] rounded border border-[#ebdcb9] space-y-3">
-                    <h5 className="text-[11px] font-bold font-sans tracking-wide text-[#5c4033] uppercase flex items-center gap-1">
-                      <Sliders className="h-3.5 w-3.5 text-[#8c2522]" />
-                      <span>MODIFY BOOK COVER SKIN</span>
-                    </h5>
-
-                    {/* Preset color bubbles */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-gray-500 block font-sans font-bold">Select Cover Color:</span>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {coverColors.map(col => {
-                          const isColorSelected = (activeNotebook.coverColor || '#8c2522') === col.hex;
-                          return (
-                            <button
-                              key={col.hex}
-                              title={col.name}
-                              className={`w-6 h-6 rounded-full border shadow transition-transform ${
-                                isColorSelected ? 'scale-110 ring-2 ring-amber-500' : 'hover:scale-105'
-                              }`}
-                              style={{ backgroundColor: col.hex }}
-                              onClick={() => {
-                                onUpdateNotebook({
-                                  ...activeNotebook,
-                                  coverColor: col.hex
-                                });
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Cover Material Customizer */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-gray-500 block font-sans font-bold">Material Texture Style:</span>
-                      <select
-                        value={activeNotebook.coverStyle || 'leather'}
-                        onChange={e => {
-                          onUpdateNotebook({
-                            ...activeNotebook,
-                            coverStyle: e.target.value as any
-                          });
-                        }}
-                        className="w-full text-xs p-1.5 bg-[#faf4eb] rounded border border-[#ebdcb9] text-[#5c4033] outline-none"
-                      >
-                        <option value="leather">Full-Grain Leather</option>
-                        <option value="linen">Thread Linen Bond</option>
-                        <option value="parchment">Aged Parchment</option>
-                        <option value="marbled">Marbled Flourish</option>
-                        <option value="velvet">Sheen Velvet Coat</option>
-                      </select>
-                    </div>
-
-                    {/* Label/Label holder design */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-gray-500 block font-sans font-bold">Spine Label Styling:</span>
-                      <select
-                        value={activeNotebook.coverLabel || 'classic'}
-                        onChange={e => {
-                          onUpdateNotebook({
-                            ...activeNotebook,
-                            coverLabel: e.target.value as any
-                          });
-                        }}
-                        className="w-full text-xs p-1.5 bg-[#faf4eb] rounded border border-[#ebdcb9] text-[#5c4033] outline-none"
-                      >
-                        <option value="classic">Classic Scribe Label</option>
-                        <option value="vintage">Italian Script Flourish</option>
-                        <option value="minimal">Minimalist Gold Stamp</option>
-                        <option value="brass_plate">Brass Nameplate Holder</option>
-                      </select>
-                    </div>
-
-                    {/* Live renaming */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-gray-500 block font-sans font-bold">Rename Notebook Title:</span>
-                      <div className="flex gap-1">
-                        <input
-                          type="text"
-                          value={activeNotebook.name}
-                          onChange={e => {
-                            onUpdateNotebook({
-                              ...activeNotebook,
-                              name: e.target.value
-                            });
-                          }}
-                          className="flex-1 text-xs p-1 px-2 border border-[#ebdcb9] bg-white rounded outline-none"
-                        />
-                      </div>
-                    </div>
+                ) : (
+                  <div className="space-y-2">
+                    {activeNotebookChapters.map(ch => {
+                      const pages = workspace.notepapers.filter(p => p.chapterId === ch.id);
+                      return (
+                        <div key={ch.id} className="border border-[#ebdcb9]/40 rounded p-2 bg-[#fdfbf7]">
+                          <h5 className="text-xs font-bold text-[#8c2522] uppercase tracking-wider">{ch.name}</h5>
+                          {pages.length === 0 ? (
+                            <span className="text-[10px] text-gray-400 italic block pl-2 mt-1">Empty act</span>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-1">
+                              {pages.map(page => (
+                                <div 
+                                  key={page.id} 
+                                  onClick={() => onSelectItem(page.id, 'page')}
+                                  className="flex items-center gap-1.5 p-1 px-2 text-[11px] text-[#5c4033] hover:bg-[#ebdcb9]/20 rounded transition-colors cursor-pointer border border-[#ebdcb9]/15"
+                                >
+                                  <FileText className="h-3 w-3 text-[#a1887f]" />
+                                  <span className="truncate flex-1 font-semibold hover:underline">{page.title}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    // Find first page of active notebook
+                    const firstCh = activeNotebookChapters[0];
+                    if (firstCh) {
+                      const firstPg = workspace.notepapers.find(p => p.chapterId === firstCh.id);
+                      if (firstPg) {
+                        onSelectItem(firstPg.id, 'page');
+                        onSelectSection(activeNotebook.section);
+                        return;
+                      }
+                    }
+                    // Fallback select general section
+                    onSelectSection(activeNotebook.section);
+                  }}
+                  className="flex-1 py-1.5 px-3 bg-[#8c2522] hover:bg-[#a32e2a] text-white text-xs font-bold rounded transition-colors text-center shadow cursor-pointer"
+                >
+                  📂 Open Journal to Write
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Are you absolutely sure you wish to dissolve and archive this notebook: ${activeNotebook.name}?`)) {
+                      onDeleteNode(activeNotebook.id, 'notebook');
+                      setSelectedNotebookId(null);
+                    }
+                  }}
+                  className="py-1.5 px-3 bg-[#faf4eb] border border-red-800 text-red-800 hover:bg-red-50 text-xs font-semibold rounded transition-colors cursor-pointer"
+                >
+                  Archive Book
+                </button>
+              </div>
             </div>
-          )}
+
+            {/* Visual Cover Modifier (Real-time updates) */}
+            <div className="p-4 bg-[#fdfbf7] rounded border border-[#ebdcb9] space-y-3">
+              <h5 className="text-[11px] font-bold font-sans tracking-wide text-[#5c4033] uppercase flex items-center gap-1">
+                <Sliders className="h-3.5 w-3.5 text-[#8c2522]" />
+                <span>MODIFY BOOK COVER SKIN</span>
+              </h5>
+
+              {/* Preset color bubbles */}
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 block font-sans font-bold">Select Cover Color:</span>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {coverColors.map(col => {
+                    const isColorSelected = (activeNotebook.coverColor || '#8c2522') === col.hex;
+                    return (
+                      <button
+                        key={col.hex}
+                        title={col.name}
+                        className={`w-6 h-6 rounded-full border shadow transition-transform cursor-pointer ${
+                          isColorSelected ? 'scale-110 ring-2 ring-amber-500' : 'hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: col.hex }}
+                        onClick={() => {
+                          onUpdateNotebook({
+                            ...activeNotebook,
+                            coverColor: col.hex
+                          });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Cover Material Customizer */}
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 block font-sans font-bold">Material Texture Style:</span>
+                <select
+                  value={activeNotebook.coverStyle || 'leather'}
+                  onChange={e => {
+                    onUpdateNotebook({
+                      ...activeNotebook,
+                      coverStyle: e.target.value as any
+                    });
+                  }}
+                  className="w-full text-xs p-1.5 bg-[#faf4eb] rounded border border-[#ebdcb9] text-[#5c4033] outline-none cursor-pointer"
+                >
+                  <option value="leather">Full-Grain Leather</option>
+                  <option value="linen">Thread Linen Bond</option>
+                  <option value="parchment">Aged Parchment</option>
+                  <option value="marbled">Marbled Flourish</option>
+                  <option value="velvet">Sheen Velvet Coat</option>
+                </select>
+              </div>
+
+              {/* Label/Label holder design */}
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 block font-sans font-bold">Spine Label Styling:</span>
+                <select
+                  value={activeNotebook.coverLabel || 'classic'}
+                  onChange={e => {
+                    onUpdateNotebook({
+                      ...activeNotebook,
+                      coverLabel: e.target.value as any
+                    });
+                  }}
+                  className="w-full text-xs p-1.5 bg-[#faf4eb] rounded border border-[#ebdcb9] text-[#5c4033] outline-none cursor-pointer"
+                >
+                  <option value="classic">Classic Scribe Label</option>
+                  <option value="vintage">Italian Script Flourish</option>
+                  <option value="minimal">Minimalist Gold Stamp</option>
+                  <option value="brass_plate">Brass Nameplate Holder</option>
+                </select>
+              </div>
+
+              {/* Live renaming */}
+              <div className="space-y-1">
+                <span className="text-[10px] text-gray-500 block font-sans font-bold">Rename Notebook Title:</span>
+                <div className="flex gap-1">
+                  <input
+                    type="text"
+                    value={activeNotebook.name}
+                    onChange={e => {
+                      onUpdateNotebook({
+                        ...activeNotebook,
+                        name: e.target.value
+                      });
+                    }}
+                    className="flex-1 text-xs p-1 px-2 border border-[#ebdcb9] bg-white rounded outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Folder/Drawer Mover */}
+              <div className="space-y-1 pt-3 border-t border-[#ebdcb9]/40">
+                <span className="text-[10px] text-gray-500 block font-sans font-bold flex items-center gap-1">
+                  <span>📁</span> Assign / Move to Drawer:
+                </span>
+                <select
+                  value={activeNotebook.folderId || ''}
+                  onChange={e => {
+                    const targetFolderId = e.target.value || null;
+                    const targetFolder = workspace.folders.find(f => f.id === targetFolderId);
+                    
+                    if (targetFolder) {
+                      onUpdateNotebook({
+                        ...activeNotebook,
+                        folderId: targetFolderId,
+                        section: targetFolder.section as 'text' | 'handwriting'
+                      });
+                      setSelectedFolderId(targetFolderId);
+                    } else {
+                      onUpdateNotebook({
+                        ...activeNotebook,
+                        folderId: null
+                      });
+                      setSelectedFolderId(null);
+                    }
+                  }}
+                  className="w-full text-xs p-1.5 bg-amber-500/5 hover:bg-[#faf4eb] rounded border border-amber-600/30 text-amber-950 font-bold outline-none cursor-pointer"
+                >
+                  <option value="">-- Unassigned Shelf Books --</option>
+                  {workspace.folders
+                    .filter(f => f.section === 'text' || f.section === 'handwriting')
+                    .map(f => (
+                      <option key={f.id} value={f.id}>
+                        Drawer: {f.name} ({f.section === 'text' ? '📝 Text' : '🎨 Handdrawn'})
+                      </option>
+                    ))
+                  }
+                </select>
+                <p className="text-[9px] text-[#5c4033]/70 italic mt-1 leading-snug">
+                  Move this volume instantly into any cabinet drawer, or return it to the unassigned shelf!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
           {/* Educational Scriptorium Capacity & Limits Guide Card */}
           <div className="mt-8 rounded-lg border border-[#ebdcb9] bg-[#ebdcb9]/15 p-6 font-serif">
