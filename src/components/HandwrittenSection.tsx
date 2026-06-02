@@ -7,12 +7,18 @@ import { Notepaper, PageSize, PaperStyle, TableData, ShapeElement, CustomMargin 
 import { colorClassMap } from './TextNotesSection';
 import { StickyNotesSectionLayer, StickyNoteCard } from './StickyNoteOverlay';
 
+interface StrokePoint {
+  x: number;
+  y: number;
+  pressure?: number;
+}
+
 interface DrawingStroke {
   id: string;
   tool: 'pen' | 'calligraphy' | 'pencil' | 'eraser' | 'highlighter';
   color: string;
   size: number;
-  points: Array<{ x: number; y: number }>;
+  points: StrokePoint[];
 }
 
 interface HandwrittenSectionProps {
@@ -283,96 +289,160 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
     }
   };
 
+  const getPressureSize = (baseSize: number, pressure: number | undefined, tool: string): number => {
+    if (pressure === undefined) return baseSize;
+    const minFactor = 0.40;
+    const maxFactor = 1.60;
+    const factor = minFactor + (maxFactor - minFactor) * pressure;
+    return baseSize * factor;
+  };
+
+  const drawStrokeSegment = (ctx: CanvasRenderingContext2D, stroke: DrawingStroke, addedPoints: StrokePoint[]) => {
+    if (stroke.points.length < 2) return;
+    
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    const isHighlighter = stroke.tool === 'highlighter';
+    const isPencil = stroke.tool === 'pencil';
+    const isCalligraphy = stroke.tool === 'calligraphy';
+    
+    if (isHighlighter) {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.strokeStyle = 'rgba(255, 235, 59, 0.35)';
+      ctx.lineWidth = 18;
+    } else if (isPencil) {
+      ctx.globalCompositeOperation = 'source-over';
+      const actualColor = stroke.color === '#1a2d54' ? 'rgba(50, 70, 110, 0.45)' : stroke.color + '55';
+      ctx.strokeStyle = actualColor;
+      ctx.lineWidth = stroke.size * 0.8;
+      ctx.shadowBlur = 1.8;
+      ctx.shadowColor = actualColor;
+    } else if (isCalligraphy) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size * 1.5;
+      ctx.shadowBlur = 0.6;
+      ctx.shadowColor = stroke.color;
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size;
+      ctx.shadowBlur = 1.0;
+      ctx.shadowColor = stroke.color;
+    }
+
+    const totalPoints = stroke.points.length;
+    const startIndex = Math.max(0, totalPoints - addedPoints.length - 2);
+    
+    for (let i = startIndex + 1; i < totalPoints; i++) {
+      const p1 = stroke.points[i - 1];
+      const p2 = stroke.points[i];
+      
+      const size1 = getPressureSize(stroke.size, p1.pressure, stroke.tool);
+      const size2 = getPressureSize(stroke.size, p2.pressure, stroke.tool);
+      
+      ctx.beginPath();
+      ctx.lineWidth = (size1 + size2) / 2;
+      
+      if (i > 1) {
+        const p0 = stroke.points[i - 2];
+        const xc = (p1.x + p2.x) / 2;
+        const yc = (p1.y + p2.y) / 2;
+        ctx.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+        ctx.quadraticCurveTo(p1.x, p1.y, xc, yc);
+      } else {
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+      }
+      ctx.stroke();
+    }
+  };
+
   const drawStroke = (ctx: CanvasRenderingContext2D, stroke: DrawingStroke) => {
     if (stroke.points.length < 1) return;
     ctx.save();
 
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const isHighlighter = stroke.tool === 'highlighter';
+    const isPencil = stroke.tool === 'pencil';
+    const isCalligraphy = stroke.tool === 'calligraphy';
+
+    if (isHighlighter) {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.strokeStyle = 'rgba(255, 235, 59, 0.35)';
+      ctx.lineWidth = 18;
+    } else if (isPencil) {
+      ctx.globalCompositeOperation = 'source-over';
+      const actualColor = stroke.color === '#1a2d54' ? 'rgba(50, 70, 110, 0.45)' : stroke.color + '55';
+      ctx.strokeStyle = actualColor;
+      ctx.lineWidth = stroke.size * 0.8;
+      ctx.shadowBlur = 1.8;
+      ctx.shadowColor = actualColor;
+    } else if (isCalligraphy) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size * 1.5;
+      ctx.shadowBlur = 0.6;
+      ctx.shadowColor = stroke.color;
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size;
+      ctx.shadowBlur = 1.0;
+      ctx.shadowColor = stroke.color;
+    }
+
     if (stroke.points.length === 1) {
+      const p = stroke.points[0];
+      const size = getPressureSize(stroke.size, p.pressure, stroke.tool);
       ctx.beginPath();
-      ctx.fillStyle = stroke.tool === 'highlighter' ? 'rgba(255, 235, 59, 0.35)' : stroke.color;
-      ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.size / 2, 0, Math.PI * 2);
+      ctx.fillStyle = isHighlighter ? 'rgba(255, 235, 59, 0.35)' : stroke.color;
+      ctx.arc(p.x, p.y, size / 2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
       return;
     }
 
-    ctx.beginPath();
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
+    const hasPressureData = stroke.points.some(p => p.pressure !== undefined && p.pressure !== 0.5);
 
-    if (stroke.tool === 'pencil') {
-      ctx.globalCompositeOperation = 'source-over';
-      const actualColor = stroke.color === '#1a2d54' ? 'rgba(50, 70, 110, 0.45)' : stroke.color + '55';
-      ctx.strokeStyle = actualColor;
-      ctx.lineWidth = stroke.size * 0.8;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.shadowBlur = 1.8;
-      ctx.shadowColor = actualColor;
-
-      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+    if (hasPressureData && !isHighlighter && !isCalligraphy) {
       for (let i = 1; i < stroke.points.length; i++) {
         const p1 = stroke.points[i - 1];
         const p2 = stroke.points[i];
-        const midPointX = (p1.x + p2.x) / 2;
-        const midPointY = (p1.y + p2.y) / 2;
-        ctx.quadraticCurveTo(p1.x, p1.y, midPointX, midPointY);
-        ctx.lineTo(p2.x, p2.y);
-      }
-      ctx.stroke();
-    } else if (stroke.tool === 'calligraphy') {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.size * 1.5;
-      ctx.lineCap = 'square';
-      ctx.lineJoin = 'miter';
-      ctx.shadowBlur = 0.6;
-      ctx.shadowColor = stroke.color;
+        
+        const size1 = getPressureSize(stroke.size, p1.pressure, stroke.tool);
+        const size2 = getPressureSize(stroke.size, p2.pressure, stroke.tool);
 
-      ctx.moveTo(stroke.points[0].x - 3, stroke.points[0].y - 3);
-      for (let i = 1; i < stroke.points.length; i++) {
-        ctx.lineTo(stroke.points[i].x - 3, stroke.points[i].y - 3);
-      }
-      ctx.stroke();
+        ctx.beginPath();
+        ctx.lineWidth = (size1 + size2) / 2;
 
+        if (i > 1) {
+          const p0 = stroke.points[i - 2];
+          const xc = (p1.x + p2.x) / 2;
+          const yc = (p1.y + p2.y) / 2;
+          ctx.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+          ctx.quadraticCurveTo(p1.x, p1.y, xc, yc);
+        } else {
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+        }
+        ctx.stroke();
+      }
+    } else {
       ctx.beginPath();
       ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-      for (let i = 1; i < stroke.points.length; i++) {
-        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-      }
-      ctx.stroke();
-    } else if (stroke.tool === 'highlighter') {
-      ctx.globalCompositeOperation = 'source-over';
-      const highlightColor = 'rgba(255, 235, 59, 0.45)';
-      ctx.strokeStyle = highlightColor;
-      ctx.lineWidth = 18;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
-
-      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-      for (let i = 1; i < stroke.points.length; i++) {
-        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-      }
-      ctx.stroke();
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.size;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.shadowBlur = 1.0;
-      ctx.shadowColor = stroke.color;
-
-      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-      for (let i = 1; i < stroke.points.length; i++) {
-        const p1 = stroke.points[i - 1];
-        const p2 = stroke.points[i];
-        const midPointX = (p1.x + p2.x) / 2;
-        const midPointY = (p1.y + p2.y) / 2;
-        ctx.quadraticCurveTo(p1.x, p1.y, midPointX, midPointY);
-        ctx.lineTo(p2.x, p2.y);
+      if (stroke.points.length === 2) {
+        ctx.lineTo(stroke.points[1].x, stroke.points[1].y);
+      } else {
+        for (let i = 1; i < stroke.points.length - 1; i++) {
+          const xc = (stroke.points[i].x + stroke.points[i + 1].x) / 2;
+          const yc = (stroke.points[i].y + stroke.points[i + 1].y) / 2;
+          ctx.quadraticCurveTo(stroke.points[i].x, stroke.points[i].y, xc, yc);
+        }
+        ctx.lineTo(stroke.points[stroke.points.length - 1].x, stroke.points[stroke.points.length - 1].y);
       }
       ctx.stroke();
     }
@@ -477,27 +547,64 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
     });
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    canvas.setPointerCapture(e.pointerId);
 
     const serializedStrokes = JSON.stringify(strokes);
     setUndoHistory(prev => [...prev, serializedStrokes]);
     setRedoHistory([]); 
 
-    const { x, y } = getCoordinates(e);
     setIsDrawing(true);
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    
+    let pressure = e.pressure;
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+      pressure = 0;
+    } else if (pressure === 0 || pressure === undefined) {
+      pressure = 0.5;
+    }
+
     setLastPos({ x, y });
 
     if (activeTool === 'eraser') {
       eraseStrokeAtPoint(x, y);
     } else {
+      const points: StrokePoint[] = [];
+      if (e.nativeEvent && typeof e.nativeEvent.getCoalescedEvents === 'function') {
+        const coalesced = e.nativeEvent.getCoalescedEvents();
+        if (coalesced && coalesced.length > 0) {
+          coalesced.forEach(ce => {
+            const cx = (ce.clientX - rect.left) * (canvas.width / rect.width);
+            const cy = (ce.clientY - rect.top) * (canvas.height / rect.height);
+            let cp = ce.pressure;
+            if (ce.pointerType === 'mouse' && ce.buttons === 0) {
+              cp = 0;
+            } else if (cp === 0 || cp === undefined) {
+              cp = 0.5;
+            }
+            points.push({ x: cx, y: cy, pressure: cp });
+          });
+        }
+      }
+
+      if (points.length === 0) {
+        points.push({ x, y, pressure });
+      }
+
       const newStroke: DrawingStroke = {
         id: `stroke-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         tool: activeTool,
         color: penColor,
         size: activeTool === 'highlighter' ? 18 : penSize,
-        points: [{ x, y }]
+        points: points
       };
       currentStrokeRef.current = newStroke;
 
@@ -508,89 +615,54 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
     }
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const { x, y } = getCoordinates(e);
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    
+    let pressure = e.pressure;
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+      pressure = 0;
+    } else if (pressure === 0 || pressure === undefined) {
+      pressure = 0.5;
+    }
 
     if (activeTool === 'eraser') {
       eraseStrokeAtPoint(x, y);
     } else {
       if (currentStrokeRef.current) {
-        currentStrokeRef.current.points.push({ x, y });
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = 'transparent';
-
-        const stroke = currentStrokeRef.current;
-        const len = stroke.points.length;
-        if (len >= 2) {
-          const p1 = stroke.points[len - 2];
-          const p2 = stroke.points[len - 1];
-
-          if (stroke.tool === 'pencil') {
-            const actualColor = stroke.color === '#1a2d54' ? 'rgba(50, 70, 110, 0.45)' : stroke.color + '55';
-            ctx.strokeStyle = actualColor;
-            ctx.lineWidth = stroke.size * 0.8;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.shadowBlur = 1.8;
-            ctx.shadowColor = actualColor;
-
-            ctx.moveTo(p1.x, p1.y);
-            const midPointX = (p1.x + p2.x) / 2;
-            const midPointY = (p1.y + p2.y) / 2;
-            ctx.quadraticCurveTo(p1.x, p1.y, midPointX, midPointY);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          } else if (stroke.tool === 'calligraphy') {
-            ctx.strokeStyle = stroke.color;
-            ctx.lineWidth = stroke.size * 1.5;
-            ctx.lineCap = 'square';
-            ctx.lineJoin = 'miter';
-            ctx.shadowBlur = 0.6;
-            ctx.shadowColor = stroke.color;
-
-            ctx.moveTo(p1.x - 3, p1.y - 3);
-            ctx.lineTo(p2.x - 3, p2.y - 3);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          } else if (stroke.tool === 'highlighter') {
-            const highlightColor = 'rgba(255, 235, 59, 0.45)';
-            ctx.strokeStyle = highlightColor;
-            ctx.lineWidth = 18;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          } else {
-            ctx.strokeStyle = stroke.color;
-            ctx.lineWidth = stroke.size;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.shadowBlur = 1.0;
-            ctx.shadowColor = stroke.color;
-
-            ctx.moveTo(p1.x, p1.y);
-            const midPointX = (p1.x + p2.x) / 2;
-            const midPointY = (p1.y + p2.y) / 2;
-            ctx.quadraticCurveTo(p1.x, p1.y, midPointX, midPointY);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
+        const newPoints: StrokePoint[] = [];
+        if (e.nativeEvent && typeof e.nativeEvent.getCoalescedEvents === 'function') {
+          const coalesced = e.nativeEvent.getCoalescedEvents();
+          if (coalesced && coalesced.length > 0) {
+            coalesced.forEach(ce => {
+              const cx = (ce.clientX - rect.left) * (canvas.width / rect.width);
+              const cy = (ce.clientY - rect.top) * (canvas.height / rect.height);
+              let cp = ce.pressure;
+              if (ce.pointerType === 'mouse' && ce.buttons === 0) {
+                cp = 0;
+              } else if (cp === 0 || cp === undefined) {
+                cp = 0.5;
+              }
+              newPoints.push({ x: cx, y: cy, pressure: cp });
+            });
           }
         }
+
+        if (newPoints.length === 0) {
+          newPoints.push({ x, y, pressure });
+        }
+
+        currentStrokeRef.current.points.push(...newPoints);
+
+        ctx.save();
+        drawStrokeSegment(ctx, currentStrokeRef.current, newPoints);
         ctx.restore();
       }
     }
@@ -598,9 +670,18 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
     setLastPos({ x, y });
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     setIsDrawing(false);
+
+    const canvas = canvasRef.current;
+    if (canvas) {
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch (err) {
+        // Safe fallback in environments with restrictive pointer capture
+      }
+    }
 
     if (activeTool !== 'eraser' && currentStrokeRef.current) {
       const finishedStroke = currentStrokeRef.current;
@@ -1679,14 +1760,13 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
             ref={canvasRef}
             width={customWidth}
             height={customHeight}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            onTouchStart={startDrawing}
-            onTouchMove={draw}
-            onTouchEnd={stopDrawing}
+            onPointerDown={startDrawing}
+            onPointerMove={draw}
+            onPointerUp={stopDrawing}
+            onPointerLeave={stopDrawing}
+            onPointerCancel={stopDrawing}
             className="absolute inset-0 w-full h-full z-20 cursor-crosshair select-none"
+            style={{ touchAction: 'none' }}
           />
 
           {/* Draggable Sticky Notes Annotation Overlay */}

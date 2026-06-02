@@ -25,6 +25,7 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
   const [eraserSize, setEraserSize] = useState<number>(25);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const currentStrokePointsRef = useRef<Array<{ x: number; y: number; pressure: number }>>([]);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState<number>(1.0);
   const [pageSize, setPageSize] = useState<PageSize>('Portrait');
@@ -364,9 +365,78 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
     };
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const getPressureSize = (baseSize: number, pressure: number | undefined): number => {
+    if (pressure === undefined) return baseSize;
+    const minFactor = 0.40;
+    const maxFactor = 1.60;
+    const factor = minFactor + (maxFactor - minFactor) * pressure;
+    return baseSize * factor;
+  };
+
+  const drawStrokeSegment = (
+    ctx: CanvasRenderingContext2D,
+    tool: 'pen' | 'highlighter' | 'eraser',
+    points: Array<{ x: number; y: number; pressure: number }>,
+    addedPoints: Array<{ x: number; y: number; pressure: number }>
+  ) => {
+    if (points.length < 2) return;
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const isHighlighter = tool === 'highlighter';
+    const isEraser = tool === 'eraser';
+
+    if (isEraser) {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+      ctx.lineWidth = eraserSize;
+    } else if (isHighlighter) {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.strokeStyle = highlighterColor;
+      ctx.lineWidth = highlighterSize;
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = penColor;
+      ctx.lineWidth = penSize;
+      ctx.shadowBlur = 1.0;
+      ctx.shadowColor = penColor;
+    }
+
+    const totalPoints = points.length;
+    const startIndex = Math.max(0, totalPoints - addedPoints.length - 2);
+
+    for (let i = startIndex + 1; i < totalPoints; i++) {
+      const p1 = points[i - 1];
+      const p2 = points[i];
+
+      const size1 = isEraser ? eraserSize : (isHighlighter ? highlighterSize : getPressureSize(penSize, p1.pressure));
+      const size2 = isEraser ? eraserSize : (isHighlighter ? highlighterSize : getPressureSize(penSize, p2.pressure));
+
+      ctx.beginPath();
+      ctx.lineWidth = (size1 + size2) / 2;
+
+      if (i > 1) {
+        const p0 = points[i - 2];
+        const xc = (p1.x + p2.x) / 2;
+        const yc = (p1.y + p2.y) / 2;
+        ctx.moveTo((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+        ctx.quadraticCurveTo(p1.x, p1.y, xc, yc);
+      } else {
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+      }
+      ctx.stroke();
+    }
+  };
+
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    canvas.setPointerCapture(e.pointerId);
 
     // Track state for undo before starting a drawing stroke
     const pageAnns = (documentItem as any)?.pageAnnotations || {};
@@ -374,73 +444,128 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
     setUndoStack(prev => [...prev, { page: currentPage, data: currentData }]);
     setRedoStack([]); // Clear redo cache on a new user stroke
 
-    const { x, y } = getCoordinates(e);
     setIsDrawing(true);
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    
+    let pressure = e.pressure;
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+      pressure = 0;
+    } else if (pressure === 0 || pressure === undefined) {
+      pressure = 0.5;
+    }
+
     setLastPos({ x, y });
+
+    const points: Array<{ x: number; y: number; pressure: number }> = [];
+    if (e.nativeEvent && typeof e.nativeEvent.getCoalescedEvents === 'function') {
+      const coalesced = e.nativeEvent.getCoalescedEvents();
+      if (coalesced && coalesced.length > 0) {
+        coalesced.forEach(ce => {
+          const cx = (ce.clientX - rect.left) * (canvas.width / rect.width);
+          const cy = (ce.clientY - rect.top) * (canvas.height / rect.height);
+          let cp = ce.pressure;
+          if (ce.pointerType === 'mouse' && ce.buttons === 0) {
+            cp = 0;
+          } else if (cp === 0 || cp === undefined) {
+            cp = 0.5;
+          }
+          points.push({ x: cx, y: cy, pressure: cp });
+        });
+      }
+    }
+
+    if (points.length === 0) {
+      points.push({ x, y, pressure });
+    }
+
+    currentStrokePointsRef.current = points;
+
+    const ctx = canvas.getContext('2d');
+    if (ctx && points.length === 1 && activeTool !== 'eraser') {
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const size = activeTool === 'highlighter' ? highlighterSize : getPressureSize(penSize, pressure);
+      ctx.beginPath();
+      if (activeTool === 'highlighter') {
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = highlighterColor;
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = penColor;
+      }
+      ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const { x, y } = getCoordinates(e);
-
-    ctx.beginPath();
-
-    if (activeTool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = eraserSize;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.moveTo(lastPos.x, lastPos.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    } else if (activeTool === 'highlighter') {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = highlighterColor;
-      ctx.lineWidth = highlighterSize;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
-
-      ctx.moveTo(lastPos.x, lastPos.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = penColor;
-      ctx.lineWidth = penSize;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      
-      // Beautiful anti-aliasing soft edges
-      ctx.shadowBlur = 1.0;
-      ctx.shadowColor = penColor;
-
-      // Quadratic curve interpolation
-      ctx.moveTo(lastPos.x, lastPos.y);
-      const midPointX = (lastPos.x + x) / 2;
-      const midPointY = (lastPos.y + y) / 2;
-      ctx.quadraticCurveTo(lastPos.x, lastPos.y, midPointX, midPointY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    
+    let pressure = e.pressure;
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+      pressure = 0;
+    } else if (pressure === 0 || pressure === undefined) {
+      pressure = 0.5;
     }
 
-    // Reset shadow values for subsequent drawings
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
+    const newPoints: Array<{ x: number; y: number; pressure: number }> = [];
+    if (e.nativeEvent && typeof e.nativeEvent.getCoalescedEvents === 'function') {
+      const coalesced = e.nativeEvent.getCoalescedEvents();
+      if (coalesced && coalesced.length > 0) {
+        coalesced.forEach(ce => {
+          const cx = (ce.clientX - rect.left) * (canvas.width / rect.width);
+          const cy = (ce.clientY - rect.top) * (canvas.height / rect.height);
+          let cp = ce.pressure;
+          if (ce.pointerType === 'mouse' && ce.buttons === 0) {
+            cp = 0;
+          } else if (cp === 0 || cp === undefined) {
+            cp = 0.5;
+          }
+          newPoints.push({ x: cx, y: cy, pressure: cp });
+        });
+      }
+    }
+
+    if (newPoints.length === 0) {
+      newPoints.push({ x, y, pressure });
+    }
+
+    currentStrokePointsRef.current.push(...newPoints);
+
+    ctx.save();
+    drawStrokeSegment(ctx, activeTool, currentStrokePointsRef.current, newPoints);
+    ctx.restore();
 
     setLastPos({ x, y });
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     setIsDrawing(false);
+
+    const canvas = canvasRef.current;
+    if (canvas) {
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch (err) {
+        // Safe fallback
+      }
+    }
+
+    currentStrokePointsRef.current = [];
     saveAnnotations();
   };
 
@@ -1602,14 +1727,13 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
             ref={canvasRef}
             width={isPdf ? pdfDimensions.width : 850}
             height={isPdf ? pdfDimensions.height : 1150}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            onTouchStart={startDrawing}
-            onTouchMove={draw}
-            onTouchEnd={stopDrawing}
+            onPointerDown={startDrawing}
+            onPointerMove={draw}
+            onPointerUp={stopDrawing}
+            onPointerLeave={stopDrawing}
+            onPointerCancel={stopDrawing}
             className="absolute inset-0 w-full h-full z-20 cursor-crosshair select-none"
+            style={{ touchAction: 'none' }}
           />
 
           {/* Draggable Sticky Notes Annotation Overlay */}
