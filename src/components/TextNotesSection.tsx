@@ -44,9 +44,26 @@ export const colorOptions = [
 interface TextNotesSectionProps {
   pageItem: Notepaper | null;
   onUpdatePage: (updated: Notepaper) => void;
+  onCreateNotepaper?: (title: string, chapterId: string) => void;
+  allNotepapers?: Notepaper[];
 }
 
-export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSectionProps) {
+export default function TextNotesSection({ 
+  pageItem, 
+  onUpdatePage, 
+  onCreateNotepaper, 
+  allNotepapers 
+}: TextNotesSectionProps) {
+  const [showQuickAddPage, setShowQuickAddPage] = useState(false);
+  const [quickPageTitle, setQuickPageTitle] = useState('');
+
+  const handleQuickAddPageSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!quickPageTitle.trim() || !pageItem || !onCreateNotepaper) return;
+    onCreateNotepaper(quickPageTitle.trim(), pageItem.chapterId);
+    setShowQuickAddPage(false);
+  };
+
   const [paperStyle, setPaperStyle] = useState<PaperStyle>('ruled');
   const [pageSize, setPageSize] = useState<PageSize>('Portrait');
   const [hasMargin, setHasMargin] = useState<boolean>(true);
@@ -600,6 +617,56 @@ export default function TextNotesSection({ pageItem, onUpdatePage }: TextNotesSe
         
         {/* Style selection */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
+          {onCreateNotepaper && pageItem && (
+            <div className="flex items-center gap-1.5 pr-1.5 border-r border-[#ebdcb9]/60">
+              {!showQuickAddPage ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const siblings = allNotepapers ? allNotepapers.filter(p => p.chapterId === pageItem.chapterId) : [];
+                    setQuickPageTitle(`Page ${siblings.length + 1}`);
+                    setShowQuickAddPage(true);
+                  }}
+                  className="flex items-center gap-1 bg-[#8c2522] hover:bg-[#8c2522]/90 hover:scale-102 hover:shadow-2xs active:scale-98 text-white px-2.5 py-1.5 rounded-sm text-xs font-semibold select-none shadow-xs cursor-pointer transition-all border border-transparent"
+                  title="Insert a new writing page into this chapter immediately"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add Page</span>
+                </button>
+              ) : (
+                <form
+                  onSubmit={handleQuickAddPageSubmit}
+                  className="flex items-center gap-1 bg-[#fcf8f2] border border-[#ebdcb9] rounded-sm p-0.5 animate-in fade-in zoom-in duration-200"
+                >
+                  <input
+                    type="text"
+                    value={quickPageTitle}
+                    onChange={e => setQuickPageTitle(e.target.value)}
+                    placeholder="Page Name"
+                    className="w-24 bg-white border border-[#ebdcb9] text-[#5c4033] rounded px-1.5 py-1 text-xs outline-none focus:border-[#8c2522] font-semibold font-serif"
+                    autoFocus
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="p-1 px-2 rounded-sm bg-[#5c4033] text-white hover:bg-[#3e2723] text-[11px] font-bold cursor-pointer font-serif"
+                    title="Confirm adding page"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickAddPage(false)}
+                    className="p-1 px-1.5 rounded-sm text-stone-400 hover:text-stone-700 hover:bg-stone-100 text-xs font-semibold cursor-pointer"
+                    title="Cancel page creation"
+                  >
+                    ✕
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
           {/* Font selection */}
           <div className="flex items-center gap-1 bg-white border border-[#ebdcb9] rounded px-1.5 py-1">
             <Type className="h-3.5 w-3.5 text-[#5c4033]" />

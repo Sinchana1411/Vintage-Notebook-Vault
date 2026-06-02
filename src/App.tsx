@@ -496,11 +496,15 @@ export default function App() {
             <TextNotesSection
               pageItem={activePage}
               onUpdatePage={handleUpdatePage}
+              onCreateNotepaper={handleCreateNotepaper}
+              allNotepapers={workspace.notepapers}
             />
           ) : (
             <HandwrittenSection
               pageItem={activePage}
               onUpdatePage={handleUpdatePage}
+              onCreateNotepaper={handleCreateNotepaper}
+              allNotepapers={workspace.notepapers}
             />
           )}
         </div>
