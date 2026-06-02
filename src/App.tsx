@@ -93,6 +93,73 @@ export default function App() {
     }
   }, [workspace, isDbLoading]);
 
+  // Keep track of the last active item per section to remember where the user left off
+  const [sectionActiveItems, setSectionActiveItems] = useState<Record<string, { id: string; type: 'document' | 'page' }>>(() => {
+    const local = localStorage.getItem('scriptorium_section_active_items');
+    if (local) {
+      try {
+        return JSON.parse(local);
+      } catch (err) {
+        console.error('Failed to parse local Scriptorium active items: ', err);
+      }
+    }
+    return {};
+  });
+
+  const pageBelongsToSection = (pageId: string, sect: 'text' | 'handwriting') => {
+    const page = workspace.notepapers.find(p => p.id === pageId);
+    if (!page) return false;
+    const chap = workspace.chapters.find(c => c.id === page.chapterId);
+    if (!chap) return false;
+    const nb = workspace.notebooks.find(n => n.id === chap.notebookId);
+    if (!nb) return false;
+    return nb.section === sect;
+  };
+
+  const isValidItem = (id: string, type: 'document' | 'page', sect: 'dashboard' | 'documents' | 'text' | 'handwriting') => {
+    if (sect === 'dashboard') return false;
+    if (sect === 'documents') {
+      return type === 'document' && workspace.documents.some(d => d.id === id);
+    }
+    if (sect === 'text' || sect === 'handwriting') {
+      return type === 'page' && workspace.notepapers.some(p => p.id === id) && pageBelongsToSection(id, sect);
+    }
+    return false;
+  };
+
+  // Update sectionActiveItems in localStorage and when active selection changes
+  useEffect(() => {
+    if (activeItemId && activeItemType && selectedSection !== 'dashboard') {
+      setSectionActiveItems(prev => {
+        const next = {
+          ...prev,
+          [selectedSection]: { id: activeItemId, type: activeItemType }
+        };
+        localStorage.setItem('scriptorium_section_active_items', JSON.stringify(next));
+        return next;
+      });
+    }
+  }, [activeItemId, activeItemType, selectedSection]);
+
+  // Restore section-specific active item if needed on section switch
+  useEffect(() => {
+    if (selectedSection === 'dashboard') {
+      return;
+    }
+    
+    // If the currently active item is NOT valid for the current section, restore the last known active item
+    if (!activeItemId || !activeItemType || !isValidItem(activeItemId, activeItemType, selectedSection)) {
+      const saved = sectionActiveItems[selectedSection];
+      if (saved && isValidItem(saved.id, saved.type, selectedSection)) {
+        setActiveItemId(saved.id);
+        setActiveItemType(saved.type);
+      } else {
+        setActiveItemId(null);
+        setActiveItemType(null);
+      }
+    }
+  }, [selectedSection, workspace]);
+
   // Set default selected leaf on load/section switch
   useEffect(() => {
     if (selectedSection === 'dashboard') {
@@ -123,13 +190,15 @@ export default function App() {
         }
       }
     }
-  }, [selectedSection, workspace]);
+  }, [selectedSection, workspace, activeItemId]);
 
   // Handler for section navigation swaps
   const handleSelectSection = (sect: 'dashboard' | 'documents' | 'text' | 'handwriting') => {
     setSelectedSection(sect);
-    setActiveItemId(null);
-    setActiveItemType(null);
+    if (sect === 'dashboard') {
+      setActiveItemId(null);
+      setActiveItemType(null);
+    }
   };
 
   const handleSelectItem = (id: string, type: 'document' | 'page') => {
