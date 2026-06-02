@@ -1366,22 +1366,12 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
       )}
 
       {/* COMPONENT DRAWWORKSPACE */}
-      <div className="flex-1 overflow-auto px-6 pt-2 pb-6 flex justify-center items-start vintage-scroll relative">
-        {!showVerticalTools && (
-          <button
-            type="button"
-            onClick={() => setShowVerticalTools(true)}
-            className="absolute top-4 right-4 z-40 flex items-center gap-1.5 bg-[#fcf8f2] border-2 border-[#ebdcb9] hover:bg-[#ebdcb9]/40 p-2 px-3 rounded-md shadow-md text-xs font-semibold text-[#5c4033] cursor-pointer hover:scale-105 active:scale-95 transition-all animate-in fade-in zoom-in"
-            title="Display Handwriting Tools"
+      <div className="flex-1 flex overflow-hidden relative select-none">
+        {/* Scrollable Canvas Workspace Area */}
+        <div className="flex-1 overflow-auto px-6 pt-2 pb-6 flex justify-center items-start vintage-scroll relative scroll-smooth">
+          <div 
+            style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}
           >
-            <Layers className="h-4 w-4 text-[#8c2522]" />
-            <span>Show Tools</span>
-          </button>
-        )}
-        <div 
-          className="flex items-start gap-4"
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}
-        >
           <div
             id="scroll-paper-body"
             className={`relative bg-[#fdfbf7] border-2 border-[#e2d6c5] shadow-md flex flex-col transition-all duration-300 pointer-events-auto ${
@@ -1748,89 +1738,100 @@ export default function HandwrittenSection({ pageItem, onUpdatePage }: Handwritt
             />
           ))}
           </div>
-
-          {/* Right side floating Vertical Tool list container */}
-          {showVerticalTools && (
-            <div className="flex flex-col gap-2 bg-[#fcf8f2] border-2 border-[#ebdcb9] rounded-md p-2.5 shadow-md shrink-0 w-36 font-serif animate-in fade-in slide-in-from-right-2 z-30">
-              <div className="flex items-center justify-between border-b border-[#ebdcb9]/60 pb-1.5 mb-1.5">
-                <span className="text-[10px] font-bold text-[#8c2522] uppercase tracking-wider font-mono">Nibs & Tools</span>
-                <button
-                  type="button"
-                  onClick={() => setShowVerticalTools(false)}
-                  className="text-stone-400 hover:text-stone-700 hover:bg-stone-100 p-0.5 rounded transition-colors text-[10.5px] font-bold px-1"
-                  title="Hide Workspace Tools"
-                >
-                  ✕ Hide
-                </button>
-              </div>
-
-              {/* Classic Nib */}
-              <button
-                type="button"
-                onClick={() => setActiveTool('pen')}
-                className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2 text-left text-xs font-semibold select-none transition-all ${
-                  activeTool === 'pen' ? 'bg-[#5c4033] text-white shadow-xs' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-                }`}
-                title="Standard Steel Ink Nib"
-              >
-                <PenTool className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">Classic Nib</span>
-              </button>
-
-              {/* Calligraphy Brush */}
-              <button
-                type="button"
-                onClick={() => setActiveTool('calligraphy')}
-                className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2 text-left text-xs font-semibold select-none transition-all ${
-                  activeTool === 'calligraphy' ? 'bg-[#8c2522] text-white shadow-xs' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-                }`}
-                title="Angled Chiseled Calligraphy Edge"
-              >
-                <Settings className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">Calligraphy Nib</span>
-              </button>
-
-              {/* Chalk Pencil */}
-              <button
-                type="button"
-                onClick={() => setActiveTool('pencil')}
-                className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2 text-left text-xs font-semibold select-none transition-all ${
-                  activeTool === 'pencil' ? 'bg-[#7f8c8d] text-white shadow-xs' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-                }`}
-                title="Charcoal Pencil Draft"
-              >
-                <Sliders className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">Chalk Pencil</span>
-              </button>
-
-              {/* Gold Marker */}
-              <button
-                type="button"
-                onClick={() => setActiveTool('highlighter')}
-                className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2 text-left text-xs font-semibold select-none transition-all ${
-                  activeTool === 'highlighter' ? 'bg-amber-600 text-white shadow-xs' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-                }`}
-                title="Golden washed translucent highlight marker"
-              >
-                <Grid className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">Gold Marker</span>
-              </button>
-
-              {/* Clean Eraser */}
-              <button
-                type="button"
-                onClick={() => setActiveTool('eraser')}
-                className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2 text-left text-xs font-semibold select-none transition-all ${
-                  activeTool === 'eraser' ? 'bg-[#333333] text-white shadow-xs' : 'text-[#5c4033] hover:bg-[#faf4eb]'
-                }`}
-                title="Clean Ink from Canvas"
-              >
-                <Eraser className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">Clean Eraser</span>
-              </button>
-            </div>
-          )}
         </div>
+      </div>
+
+      {/* Fixed Right Side Bar (does not scale or move with canvas) */}
+      {showVerticalTools ? (
+        <div className="w-40 shrink-0 bg-[#fcf8f2] border-l-2 border-[#ebdcb9] p-2.5 shadow-md flex flex-col gap-2 z-30 font-serif select-none h-full overflow-y-auto animate-in fade-in slide-in-from-right-2">
+          <div className="flex items-center justify-between border-b border-[#ebdcb9]/60 pb-1.5 mb-1.5">
+            <span className="text-[10px] font-bold text-[#8c2522] uppercase tracking-wider font-mono">Nibs & Tools</span>
+            <button
+              type="button"
+              onClick={() => setShowVerticalTools(false)}
+              className="text-stone-400 hover:text-[#8c2522] hover:bg-[#ebdcb9]/20 p-1 px-1.5 rounded transition-all text-[10px] font-bold cursor-pointer select-none"
+              title="Hide Workspace Tools"
+            >
+              ✕ Hide
+            </button>
+          </div>
+
+          {/* Classic Nib */}
+          <button
+            type="button"
+            onClick={() => setActiveTool('pen')}
+            className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2.5 text-left text-xs font-semibold select-none transition-all cursor-pointer ${
+              activeTool === 'pen' ? 'bg-[#5c4033] text-white shadow-xs scale-102 font-bold' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+            }`}
+            title="Standard Steel Ink Nib"
+          >
+            <PenTool className="h-4 w-4 shrink-0" />
+            <span className="truncate">Classic Nib</span>
+          </button>
+
+          {/* Calligraphy Nib */}
+          <button
+            type="button"
+            onClick={() => setActiveTool('calligraphy')}
+            className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2.5 text-left text-xs font-semibold select-none transition-all cursor-pointer ${
+              activeTool === 'calligraphy' ? 'bg-[#8c2522] text-white shadow-xs scale-102 font-bold' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+            }`}
+            title="Angled Chiseled Calligraphy Edge"
+          >
+            <Settings className="h-4 w-4 shrink-0" />
+            <span className="truncate">Calligraphy Nib</span>
+          </button>
+
+          {/* Chalk Pencil */}
+          <button
+            type="button"
+            onClick={() => setActiveTool('pencil')}
+            className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2.5 text-left text-xs font-semibold select-none transition-all cursor-pointer ${
+              activeTool === 'pencil' ? 'bg-[#7f8c8d] text-white shadow-xs scale-102 font-bold' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+            }`}
+            title="Charcoal Pencil Draft"
+          >
+            <Sliders className="h-4 w-4 shrink-0" />
+            <span className="truncate">Chalk Pencil</span>
+          </button>
+
+          {/* Gold Marker */}
+          <button
+            type="button"
+            onClick={() => setActiveTool('highlighter')}
+            className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2.5 text-left text-xs font-semibold select-none transition-all cursor-pointer ${
+              activeTool === 'highlighter' ? 'bg-amber-600 text-white shadow-xs scale-102 font-bold' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+            }`}
+            title="Golden washed translucent highlight marker"
+          >
+            <Grid className="h-4 w-4 shrink-0" />
+            <span className="truncate">Gold Marker</span>
+          </button>
+
+          {/* Clean Eraser */}
+          <button
+            type="button"
+            onClick={() => setActiveTool('eraser')}
+            className={`flex items-center gap-2 rounded px-2 md:px-2.5 py-2.5 text-left text-xs font-semibold select-none transition-all cursor-pointer ${
+              activeTool === 'eraser' ? 'bg-[#333333] text-white shadow-xs scale-102 font-bold' : 'text-[#5c4033] hover:bg-[#faf4eb]'
+            }`}
+            title="Clean Ink from Canvas"
+          >
+            <Eraser className="h-4 w-4 shrink-0" />
+            <span className="truncate">Clean Eraser</span>
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowVerticalTools(true)}
+          className="absolute top-4 right-4 z-40 flex items-center gap-1.5 bg-[#fcf8f2] border-2 border-[#ebdcb9] hover:bg-[#ebdcb9]/40 p-2 px-3 rounded-md shadow-md text-xs font-semibold text-[#5c4033] cursor-pointer hover:scale-105 active:scale-95 transition-all animate-in fade-in zoom-in"
+          title="Display Handwriting Tools"
+        >
+          <Layers className="h-4 w-4 text-[#8c2522]" />
+          <span>Show Tools</span>
+        </button>
+      )}
       </div>
 
       {/* NEW FIXED BOTTOM ACTION BAR / PANEL */}
