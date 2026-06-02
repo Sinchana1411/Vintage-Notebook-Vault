@@ -183,6 +183,7 @@ export interface ImportedDocument {
   stickyNotes?: StickyNote[];
   customWidth?: number;
   customHeight?: number;
+  currentPage?: number;
 }
 
 // Top level workspace format

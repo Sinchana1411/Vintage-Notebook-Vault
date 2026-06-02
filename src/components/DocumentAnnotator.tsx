@@ -67,14 +67,24 @@ export default function DocumentAnnotator({ documentItem, onUpdateDocument }: Do
 
   const isPdf = documentItem?.fileType === 'pdf';
 
-  // Reset undo history only when file changes
+  // Reset undo history only when file changes and load saved page
   useEffect(() => {
     if (documentItem) {
       setUndoStack([]);
       setRedoStack([]);
-      setCurrentPage(1);
+      setCurrentPage(documentItem.currentPage || 1);
     }
   }, [documentItem?.id]);
+
+  // Synchronize currentPage back to the parent document state
+  useEffect(() => {
+    if (documentItem && (documentItem.currentPage || 1) !== currentPage) {
+      onUpdateDocument({
+        ...documentItem,
+        currentPage
+      });
+    }
+  }, [currentPage]);
 
   const mappedPageSize = (val: string): PageSize => {
     if (val === 'Landscape' || val === 'Letter_Landscape' || val === 'A4_Landscape') {
