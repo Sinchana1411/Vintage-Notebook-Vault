@@ -1498,7 +1498,11 @@ export default function HandwrittenSection({
               height: `${customHeight}px`,
               paddingLeft: hasMargin && marginSide !== 'right' ? `${marginPositionLeft + 24}px` : '48px',
               paddingRight: hasMargin && marginSide !== 'left' ? `${marginPositionRight + 24}px` : '48px',
-              paddingTop: hasMargin && hasHorizontalMargin ? `${marginPositionTop + 24}px` : '48px',
+              paddingTop: `${
+                paperStyle === 'ruled'
+                  ? Math.round((hasMargin && hasHorizontalMargin ? (marginPositionTop + 24) : 48) / 32) * 32
+                  : (hasMargin && hasHorizontalMargin ? (marginPositionTop + 24) : 48)
+              }px`,
               paddingBottom: hasMargin && hasHorizontalMargin ? `${marginPositionBottom + 48}px` : '64px',
             }}
             onPointerMove={handlePointerMove}
@@ -1664,7 +1668,10 @@ export default function HandwrittenSection({
           })}
 
           {/* Core Title inputs */}
-          <div className="relative z-10 mb-4 border-b border-[#ebdcb9] pb-3 flex justify-between items-end">
+          <div 
+            className="relative z-10 border-b border-[#ebdcb9] pb-3 flex justify-between items-end"
+            style={{ height: '96px', paddingBottom: '12px', marginBottom: '32px' }}
+          >
             <div className="flex-1 select-text">
               <input
                 type="text"
