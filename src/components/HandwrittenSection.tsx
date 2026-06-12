@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   PenTool, Eraser, Download, Check, RefreshCw, Layers, Sliders,
-  HelpCircle, Settings, Play, Archive, Plus, Trash2, Grid, Square, Circle, ChevronRight 
+  HelpCircle, Settings, Play, Archive, Plus, Trash2, Grid, Square, Circle, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import { Notepaper, PageSize, PaperStyle, TableData, ShapeElement, CustomMargin } from '../types';
 import { colorClassMap } from './TextNotesSection';
@@ -26,13 +26,23 @@ interface HandwrittenSectionProps {
   onUpdatePage: (updated: Notepaper) => void;
   onCreateNotepaper?: (title: string, chapterId: string) => void;
   allNotepapers?: Notepaper[];
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
+  pageIndexInfo?: string;
+  prevPageTitle?: string;
+  nextPageTitle?: string;
 }
 
 export default function HandwrittenSection({ 
   pageItem, 
   onUpdatePage, 
   onCreateNotepaper, 
-  allNotepapers 
+  allNotepapers,
+  onPrevPage,
+  onNextPage,
+  pageIndexInfo,
+  prevPageTitle,
+  nextPageTitle
 }: HandwrittenSectionProps) {
   const [showQuickAddPage, setShowQuickAddPage] = useState(false);
   const [quickPageTitle, setQuickPageTitle] = useState('');
@@ -881,7 +891,46 @@ export default function HandwrittenSection({
           </button>
 
           {onCreateNotepaper && pageItem && (
-            <div className="flex items-center gap-1.5 pl-1.5 border-l border-[#ebdcb9]/60">
+            <div className="flex items-center gap-1.5 pl-1.5 border-l border-[#ebdcb9]/60 flex-wrap">
+              {/* Previous page button */}
+              <button
+                type="button"
+                disabled={!onPrevPage}
+                onClick={onPrevPage}
+                className={`flex items-center justify-center p-1.5 rounded-sm border border-[#ebdcb9] ${
+                  onPrevPage 
+                    ? 'bg-white text-[#5c4033] hover:bg-[#faf4eb] hover:scale-105 active:scale-95 cursor-pointer' 
+                    : 'bg-stone-100 text-stone-400 cursor-not-allowed opacity-50'
+                } transition-all`}
+                title={prevPageTitle ? `Previous Page: ${prevPageTitle}` : "Beginning of notebook"}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+
+              {/* Page Index indicator */}
+              {pageIndexInfo && (
+                <span className="text-[11px] font-bold text-[#5c4033] bg-[#f5ebd6]/60 px-2.5 py-1 rounded-sm font-mono select-none" title="Current page sequence index in this section">
+                  {pageIndexInfo}
+                </span>
+              )}
+
+              {/* Next page button */}
+              <button
+                type="button"
+                disabled={!onNextPage}
+                onClick={onNextPage}
+                className={`flex items-center justify-center p-1.5 rounded-sm border border-[#ebdcb9] ${
+                  onNextPage 
+                    ? 'bg-white text-[#5c4033] hover:bg-[#faf4eb] hover:scale-105 active:scale-95 cursor-pointer' 
+                    : 'bg-stone-100 text-stone-400 cursor-not-allowed opacity-50'
+                } transition-all`}
+                title={nextPageTitle ? `Next Page: ${nextPageTitle}` : "End of notebook"}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+
+              <div className="h-4 w-[1px] bg-[#ebdcb9]/60 mx-1"></div>
+
               {!showQuickAddPage ? (
                 <button
                   type="button"

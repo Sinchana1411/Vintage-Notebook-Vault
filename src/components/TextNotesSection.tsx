@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Type, Bold, Italic, Underline, Table as TableIcon, BarChart3, 
   HelpCircle, AlertCircle, Trash2, Plus, Settings, Square, Circle, 
-  ChevronsRight, FileText, LayoutTemplate, ChevronUp, ChevronDown, Sliders, Download 
+  ChevronsRight, FileText, LayoutTemplate, ChevronUp, ChevronDown, Sliders, Download,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Notepaper, PageSize, PaperStyle, TableData, ChartData, ShapeElement, CustomMargin } from '../types';
 import { StickyNotesSectionLayer, StickyNoteCard } from './StickyNoteOverlay';
@@ -46,13 +47,23 @@ interface TextNotesSectionProps {
   onUpdatePage: (updated: Notepaper) => void;
   onCreateNotepaper?: (title: string, chapterId: string) => void;
   allNotepapers?: Notepaper[];
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
+  pageIndexInfo?: string;
+  prevPageTitle?: string;
+  nextPageTitle?: string;
 }
 
 export default function TextNotesSection({ 
   pageItem, 
   onUpdatePage, 
   onCreateNotepaper, 
-  allNotepapers 
+  allNotepapers,
+  onPrevPage,
+  onNextPage,
+  pageIndexInfo,
+  prevPageTitle,
+  nextPageTitle
 }: TextNotesSectionProps) {
   const [showQuickAddPage, setShowQuickAddPage] = useState(false);
   const [quickPageTitle, setQuickPageTitle] = useState('');
@@ -618,7 +629,46 @@ export default function TextNotesSection({
         {/* Style selection */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
           {onCreateNotepaper && pageItem && (
-            <div className="flex items-center gap-1.5 pr-1.5 border-r border-[#ebdcb9]/60">
+            <div className="flex items-center gap-1.5 pr-1.5 border-r border-[#ebdcb9]/60 flex-wrap">
+              {/* Previous page button */}
+              <button
+                type="button"
+                disabled={!onPrevPage}
+                onClick={onPrevPage}
+                className={`flex items-center justify-center p-1.5 rounded-sm border border-[#ebdcb9] ${
+                  onPrevPage 
+                    ? 'bg-white text-[#5c4033] hover:bg-[#faf4eb] hover:scale-105 active:scale-95 cursor-pointer' 
+                    : 'bg-stone-100 text-stone-400 cursor-not-allowed opacity-50'
+                } transition-all`}
+                title={prevPageTitle ? `Previous Page: ${prevPageTitle}` : "Beginning of notebook"}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+
+              {/* Page Index indicator */}
+              {pageIndexInfo && (
+                <span className="text-[11px] font-bold text-[#5c4033] bg-[#f5ebd6]/60 px-2.5 py-1 rounded-sm font-mono select-none" title="Current page sequence index in this section">
+                  {pageIndexInfo}
+                </span>
+              )}
+
+              {/* Next page button */}
+              <button
+                type="button"
+                disabled={!onNextPage}
+                onClick={onNextPage}
+                className={`flex items-center justify-center p-1.5 rounded-sm border border-[#ebdcb9] ${
+                  onNextPage 
+                    ? 'bg-white text-[#5c4033] hover:bg-[#faf4eb] hover:scale-105 active:scale-95 cursor-pointer' 
+                    : 'bg-stone-100 text-stone-400 cursor-not-allowed opacity-50'
+                } transition-all`}
+                title={nextPageTitle ? `Next Page: ${nextPageTitle}` : "End of notebook"}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+
+              <div className="h-4 w-[1px] bg-[#ebdcb9]/60 mx-1"></div>
+
               {!showQuickAddPage ? (
                 <button
                   type="button"
@@ -1209,7 +1259,11 @@ export default function TextNotesSection({
               height: `${customHeight}px`,
               paddingLeft: hasMargin && marginSide !== 'right' ? `${marginPositionLeft + 24}px` : '48px',
               paddingRight: hasMargin && marginSide !== 'left' ? `${marginPositionRight + 24}px` : '48px',
-              paddingTop: hasMargin && hasHorizontalMargin ? `${marginPositionTop + 24}px` : '48px',
+              paddingTop: `${
+                paperStyle === 'ruled'
+                  ? Math.round((hasMargin && hasHorizontalMargin ? (marginPositionTop + 24) : 48) / 32) * 32
+                  : (hasMargin && hasHorizontalMargin ? (marginPositionTop + 24) : 48)
+              }px`,
               paddingBottom: hasMargin && hasHorizontalMargin ? `${marginPositionBottom + 48}px` : '64px',
             }}
             onPointerMove={handlePointerMove}
@@ -1458,7 +1512,10 @@ export default function TextNotesSection({
           })}
 
           {/* Heading */}
-          <div className="relative z-10 mb-6 border-b border-[#ebdcb9] pb-3 flex justify-between items-end">
+          <div 
+            className="relative z-10 border-b border-[#ebdcb9] pb-3 flex justify-between items-end"
+            style={{ height: '96px', paddingBottom: '12px', marginBottom: '32px' }}
+          >
             <div className="flex-1">
               <input
                 type="text"

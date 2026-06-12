@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Folder, Book, Layers, FileText, PenTool, Search, 
   HelpCircle, Menu, ChevronLeft, RefreshCw 
@@ -409,6 +409,87 @@ export default function App() {
     ? workspace.notepapers.find(p => p.id === activeItemId) || null
     : null;
 
+  // Get all notepapers belonging to the currently selected section in local logical order
+  const activeSectionNotepapersOrdered = useMemo(() => {
+    if (selectedSection !== 'text' && selectedSection !== 'handwriting') {
+      return [];
+    }
+    
+    const section = selectedSection;
+
+    // 1. Get folders of this section and sort by name
+    const secFolders = [...workspace.folders].filter(f => f.section === section);
+    secFolders.sort((a, b) => a.name.localeCompare(b.name));
+
+    // 2. Get notebooks of this section
+    const secNotebooks = [...workspace.notebooks].filter(n => n.section === section);
+    
+    // Ordered notebooks: first folders, then no folders
+    const orderedNotebooks: Notebook[] = [];
+    
+    secFolders.forEach(folder => {
+      const folderNbs = secNotebooks.filter(nb => nb.folderId === folder.id);
+      folderNbs.sort((a, b) => a.name.localeCompare(b.name));
+      orderedNotebooks.push(...folderNbs);
+    });
+    
+    const rootNbs = secNotebooks.filter(nb => !nb.folderId);
+    rootNbs.sort((a, b) => a.name.localeCompare(b.name));
+    orderedNotebooks.push(...rootNbs);
+
+    // 3. Collect pages by traversing folders -> notebooks -> chapters -> pages
+    const orderedPages: Notepaper[] = [];
+    orderedNotebooks.forEach(nb => {
+      const nbChapters = [...workspace.chapters].filter(ch => ch.notebookId === nb.id);
+      nbChapters.sort((a, b) => (a.order || 0) - (b.order || 0));
+      
+      nbChapters.forEach(ch => {
+        const chPages = [...workspace.notepapers].filter(p => p.chapterId === ch.id);
+        chPages.sort((a, b) => a.createdAt - b.createdAt);
+        orderedPages.push(...chPages);
+      });
+    });
+
+    // Appendix for any loose pages
+    const loosePages = workspace.notepapers.filter(p => {
+      const chap = workspace.chapters.find(c => c.id === p.chapterId);
+      if (!chap) return false;
+      const nb = workspace.notebooks.find(n => n.id === chap.notebookId);
+      if (!nb) return false;
+      return nb.section === section && !orderedPages.some(op => op.id === p.id);
+    });
+    orderedPages.push(...loosePages);
+
+    return orderedPages;
+  }, [workspace, selectedSection]);
+
+  // Determine prev/next pages
+  const activePageIndex = useMemo(() => {
+    if (!activeItemId || activeItemType !== 'page') return -1;
+    return activeSectionNotepapersOrdered.findIndex(p => p.id === activeItemId);
+  }, [activeItemId, activeItemType, activeSectionNotepapersOrdered]);
+
+  const prevPage = activePageIndex > 0 ? activeSectionNotepapersOrdered[activePageIndex - 1] : null;
+  const nextPage = activePageIndex >= 0 && activePageIndex < activeSectionNotepapersOrdered.length - 1 
+    ? activeSectionNotepapersOrdered[activePageIndex + 1] 
+    : null;
+
+  const pageIndexInfo = activePageIndex >= 0 && activeSectionNotepapersOrdered.length > 0
+    ? `Page ${activePageIndex + 1} of ${activeSectionNotepapersOrdered.length}`
+    : '';
+
+  const handlePrevPage = () => {
+    if (prevPage) {
+      handleSelectItem(prevPage.id, 'page');
+    }
+  };
+
+  const handleNextPage = () => {
+    if (nextPage) {
+      handleSelectItem(nextPage.id, 'page');
+    }
+  };
+
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#faf4eb] text-[#333333]">
       
@@ -498,6 +579,11 @@ export default function App() {
               onUpdatePage={handleUpdatePage}
               onCreateNotepaper={handleCreateNotepaper}
               allNotepapers={workspace.notepapers}
+              onPrevPage={prevPage ? handlePrevPage : undefined}
+              onNextPage={nextPage ? handleNextPage : undefined}
+              pageIndexInfo={pageIndexInfo || undefined}
+              prevPageTitle={prevPage?.title || undefined}
+              nextPageTitle={nextPage?.title || undefined}
             />
           ) : (
             <HandwrittenSection
@@ -505,6 +591,11 @@ export default function App() {
               onUpdatePage={handleUpdatePage}
               onCreateNotepaper={handleCreateNotepaper}
               allNotepapers={workspace.notepapers}
+              onPrevPage={prevPage ? handlePrevPage : undefined}
+              onNextPage={nextPage ? handleNextPage : undefined}
+              pageIndexInfo={pageIndexInfo || undefined}
+              prevPageTitle={prevPage?.title || undefined}
+              nextPageTitle={nextPage?.title || undefined}
             />
           )}
         </div>

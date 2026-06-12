@@ -18,9 +18,33 @@
 
 /* Custom paper guidelines overlay styling */
 .paper-ruled {
-  background-size: 100% 28px;
-  background-image: linear-gradient(rgba(0, 0, 0, 0) 27px, #e2d6c5 27px);
-  line-height: 28px;
+  background-size: 100% 32px;
+  background-image: linear-gradient(rgba(0, 0, 0, 0) 31px, #ebdcb9 31px);
+  line-height: 32px;
+}
+
+/* Strict editor child alignments to maintain alignment to the 32px grid lines */
+#vintage-content-editor {
+  line-height: 32px !important;
+}
+
+#vintage-content-editor p,
+#vintage-content-editor div,
+#vintage-content-editor ul,
+#vintage-content-editor ol,
+#vintage-content-editor li,
+#vintage-content-editor blockquote {
+  line-height: 32px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Ensure empty paragraph/div elements occupy exactly 32px height to avoid line desync */
+#vintage-content-editor p:empty::before,
+#vintage-content-editor div:empty::before {
+  content: '\200B';
 }
 
 .paper-grid {
