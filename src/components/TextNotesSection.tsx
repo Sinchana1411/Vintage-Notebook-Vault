@@ -1271,13 +1271,13 @@ export default function TextNotesSection({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
           >
-          {/* Chapter Watermark in absolute top-right corner */}
+          {/* Chapter printed folio heading in top-right corner */}
           {chapterName && (
-            <div className="absolute top-[20px] right-[28px] pointer-events-none select-none z-10 text-right opacity-35">
-              <span className="text-[8px] text-[#8c2522] font-mono uppercase tracking-widest font-bold block mb-0.5">
+            <div className="absolute top-[20px] right-[28px] pointer-events-none select-none z-10 text-right opacity-75 mix-blend-multiply">
+              <span className="text-[7.5px] text-[#8c2522] font-mono uppercase tracking-widest font-semibold block leading-none mb-1">
                 Chapter
               </span>
-              <span className="text-xs text-[#5c4033] font-serif italic block truncate max-w-[180px]" title={chapterName}>
+              <span className="text-[11px] text-[#4e3629] font-serif italic block truncate max-w-[200px] border-t border-[#ebdcb9] pt-1" title={chapterName}>
                 {chapterName}
               </span>
             </div>
