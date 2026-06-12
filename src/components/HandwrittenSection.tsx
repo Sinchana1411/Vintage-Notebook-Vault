@@ -31,6 +31,7 @@ interface HandwrittenSectionProps {
   pageIndexInfo?: string;
   prevPageTitle?: string;
   nextPageTitle?: string;
+  chapterName?: string;
 }
 
 export default function HandwrittenSection({ 
@@ -42,7 +43,8 @@ export default function HandwrittenSection({
   onNextPage,
   pageIndexInfo,
   prevPageTitle,
-  nextPageTitle
+  nextPageTitle,
+  chapterName
 }: HandwrittenSectionProps) {
   const [showQuickAddPage, setShowQuickAddPage] = useState(false);
   const [quickPageTitle, setQuickPageTitle] = useState('');
@@ -1686,6 +1688,16 @@ export default function HandwrittenSection({
                 Calligraphic Blank Canvas • Synchronized {new Date(pageItem.createdAt).toLocaleDateString()}
               </p>
             </div>
+            {chapterName && (
+              <div className="text-right ml-4 max-w-[200px] truncate leading-none mb-1 select-none">
+                <span className="text-[9px] text-[#8c2522] font-mono uppercase tracking-widest font-bold block mb-0.5">
+                  Chapter
+                </span>
+                <span className="text-xs text-[#5c4033] font-serif italic block truncate" title={chapterName}>
+                  {chapterName}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Embedded Custom Tables Overlay */}

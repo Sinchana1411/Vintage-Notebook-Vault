@@ -447,6 +447,12 @@ export default function App() {
     ? `Page ${activePageIndex + 1} of ${activeNotebookNotepapersOrdered.length}`
     : '';
 
+  const currentChapterName = useMemo(() => {
+    if (!activePage) return undefined;
+    const ch = workspace.chapters.find(c => c.id === activePage.chapterId);
+    return ch ? ch.title : undefined;
+  }, [workspace.chapters, activePage]);
+
   const handlePrevPage = () => {
     if (prevPage) {
       handleSelectItem(prevPage.id, 'page');
@@ -553,6 +559,7 @@ export default function App() {
               pageIndexInfo={pageIndexInfo || undefined}
               prevPageTitle={prevPage?.title || undefined}
               nextPageTitle={nextPage?.title || undefined}
+              chapterName={currentChapterName}
             />
           ) : (
             <HandwrittenSection
@@ -565,6 +572,7 @@ export default function App() {
               pageIndexInfo={pageIndexInfo || undefined}
               prevPageTitle={prevPage?.title || undefined}
               nextPageTitle={nextPage?.title || undefined}
+              chapterName={currentChapterName}
             />
           )}
         </div>
