@@ -409,73 +409,42 @@ export default function App() {
     ? workspace.notepapers.find(p => p.id === activeItemId) || null
     : null;
 
-  // Get all notepapers belonging to the currently selected section in local logical order
-  const activeSectionNotepapersOrdered = useMemo(() => {
-    if (selectedSection !== 'text' && selectedSection !== 'handwriting') {
-      return [];
-    }
-    
-    const section = selectedSection;
+  // Get all notepapers belonging strictly to the currently opened notebook in logical order
+  const activeNotebookNotepapersOrdered = useMemo(() => {
+    if (!activePage) return [];
+    const activeChapter = workspace.chapters.find(c => c.id === activePage.chapterId);
+    if (!activeChapter) return [];
+    const activeNotebookId = activeChapter.notebookId;
+    if (!activeNotebookId) return [];
 
-    // 1. Get folders of this section and sort by name
-    const secFolders = [...workspace.folders].filter(f => f.section === section);
-    secFolders.sort((a, b) => a.name.localeCompare(b.name));
+    // 1. Get all chapters of this notebook and sort by order
+    const nbChapters = [...workspace.chapters].filter(ch => ch.notebookId === activeNotebookId);
+    nbChapters.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // 2. Get notebooks of this section
-    const secNotebooks = [...workspace.notebooks].filter(n => n.section === section);
-    
-    // Ordered notebooks: first folders, then no folders
-    const orderedNotebooks: Notebook[] = [];
-    
-    secFolders.forEach(folder => {
-      const folderNbs = secNotebooks.filter(nb => nb.folderId === folder.id);
-      folderNbs.sort((a, b) => a.name.localeCompare(b.name));
-      orderedNotebooks.push(...folderNbs);
-    });
-    
-    const rootNbs = secNotebooks.filter(nb => !nb.folderId);
-    rootNbs.sort((a, b) => a.name.localeCompare(b.name));
-    orderedNotebooks.push(...rootNbs);
-
-    // 3. Collect pages by traversing folders -> notebooks -> chapters -> pages
+    // 2. Collect pages under each chapter of this notebook
     const orderedPages: Notepaper[] = [];
-    orderedNotebooks.forEach(nb => {
-      const nbChapters = [...workspace.chapters].filter(ch => ch.notebookId === nb.id);
-      nbChapters.sort((a, b) => (a.order || 0) - (b.order || 0));
-      
-      nbChapters.forEach(ch => {
-        const chPages = [...workspace.notepapers].filter(p => p.chapterId === ch.id);
-        chPages.sort((a, b) => a.createdAt - b.createdAt);
-        orderedPages.push(...chPages);
-      });
+    nbChapters.forEach(ch => {
+      const chPages = [...workspace.notepapers].filter(p => p.chapterId === ch.id);
+      chPages.sort((a, b) => a.createdAt - b.createdAt);
+      orderedPages.push(...chPages);
     });
-
-    // Appendix for any loose pages
-    const loosePages = workspace.notepapers.filter(p => {
-      const chap = workspace.chapters.find(c => c.id === p.chapterId);
-      if (!chap) return false;
-      const nb = workspace.notebooks.find(n => n.id === chap.notebookId);
-      if (!nb) return false;
-      return nb.section === section && !orderedPages.some(op => op.id === p.id);
-    });
-    orderedPages.push(...loosePages);
 
     return orderedPages;
-  }, [workspace, selectedSection]);
+  }, [workspace, activePage]);
 
-  // Determine prev/next pages
+  // Determine prev/next pages specifically within this notebook
   const activePageIndex = useMemo(() => {
     if (!activeItemId || activeItemType !== 'page') return -1;
-    return activeSectionNotepapersOrdered.findIndex(p => p.id === activeItemId);
-  }, [activeItemId, activeItemType, activeSectionNotepapersOrdered]);
+    return activeNotebookNotepapersOrdered.findIndex(p => p.id === activeItemId);
+  }, [activeItemId, activeItemType, activeNotebookNotepapersOrdered]);
 
-  const prevPage = activePageIndex > 0 ? activeSectionNotepapersOrdered[activePageIndex - 1] : null;
-  const nextPage = activePageIndex >= 0 && activePageIndex < activeSectionNotepapersOrdered.length - 1 
-    ? activeSectionNotepapersOrdered[activePageIndex + 1] 
+  const prevPage = activePageIndex > 0 ? activeNotebookNotepapersOrdered[activePageIndex - 1] : null;
+  const nextPage = activePageIndex >= 0 && activePageIndex < activeNotebookNotepapersOrdered.length - 1 
+    ? activeNotebookNotepapersOrdered[activePageIndex + 1] 
     : null;
 
-  const pageIndexInfo = activePageIndex >= 0 && activeSectionNotepapersOrdered.length > 0
-    ? `Page ${activePageIndex + 1} of ${activeSectionNotepapersOrdered.length}`
+  const pageIndexInfo = activePageIndex >= 0 && activeNotebookNotepapersOrdered.length > 0
+    ? `Page ${activePageIndex + 1} of ${activeNotebookNotepapersOrdered.length}`
     : '';
 
   const handlePrevPage = () => {
