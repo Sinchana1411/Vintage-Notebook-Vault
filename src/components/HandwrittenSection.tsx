@@ -1510,6 +1510,18 @@ export default function HandwrittenSection({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
           >
+          {/* Chapter Watermark in absolute top-right corner */}
+          {chapterName && (
+            <div className="absolute top-[20px] right-[28px] pointer-events-none select-none z-10 text-right opacity-35">
+              <span className="text-[8px] text-[#8c2522] font-mono uppercase tracking-widest font-bold block mb-0.5">
+                Chapter
+              </span>
+              <span className="text-xs text-[#5c4033] font-serif italic block truncate max-w-[180px]" title={chapterName}>
+                {chapterName}
+              </span>
+            </div>
+          )}
+
           {/* Ruling Overlay Patterns */}
           {paperStyle !== 'unruled' && (
             <div className={`absolute inset-0 pointer-events-none opacity-45 z-0 ${
@@ -1688,16 +1700,6 @@ export default function HandwrittenSection({
                 Calligraphic Blank Canvas • Synchronized {new Date(pageItem.createdAt).toLocaleDateString()}
               </p>
             </div>
-            {chapterName && (
-              <div className="text-right ml-4 max-w-[200px] truncate leading-none mb-1 select-none">
-                <span className="text-[9px] text-[#8c2522] font-mono uppercase tracking-widest font-bold block mb-0.5">
-                  Chapter
-                </span>
-                <span className="text-xs text-[#5c4033] font-serif italic block truncate" title={chapterName}>
-                  {chapterName}
-                </span>
-              </div>
-            )}
           </div>
 
           {/* Embedded Custom Tables Overlay */}
