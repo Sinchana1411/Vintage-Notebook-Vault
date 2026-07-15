@@ -393,6 +393,16 @@ export default function App() {
     }));
   };
 
+  const handleApplyFormatToAllPages = (format: Partial<Notepaper>) => {
+    setWorkspace(prev => ({
+      ...prev,
+      notepapers: prev.notepapers.map(p => ({
+        ...p,
+        ...format
+      }))
+    }));
+  };
+
   const handleUpdateNotebook = (updated: Notebook) => {
     setWorkspace(prev => ({
       ...prev,
@@ -552,6 +562,7 @@ export default function App() {
             <TextNotesSection
               pageItem={activePage}
               onUpdatePage={handleUpdatePage}
+              onApplyFormatToAllPages={handleApplyFormatToAllPages}
               onCreateNotepaper={handleCreateNotepaper}
               allNotepapers={workspace.notepapers}
               onPrevPage={prevPage ? handlePrevPage : undefined}
@@ -565,6 +576,7 @@ export default function App() {
             <HandwrittenSection
               pageItem={activePage}
               onUpdatePage={handleUpdatePage}
+              onApplyFormatToAllPages={handleApplyFormatToAllPages}
               onCreateNotepaper={handleCreateNotepaper}
               allNotepapers={workspace.notepapers}
               onPrevPage={prevPage ? handlePrevPage : undefined}

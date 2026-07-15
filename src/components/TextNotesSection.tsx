@@ -45,6 +45,7 @@ export const colorOptions = [
 interface TextNotesSectionProps {
   pageItem: Notepaper | null;
   onUpdatePage: (updated: Notepaper) => void;
+  onApplyFormatToAllPages?: (format: Partial<Notepaper>) => void;
   onCreateNotepaper?: (title: string, chapterId: string) => void;
   allNotepapers?: Notepaper[];
   onPrevPage?: () => void;
@@ -58,6 +59,7 @@ interface TextNotesSectionProps {
 export default function TextNotesSection({ 
   pageItem, 
   onUpdatePage, 
+  onApplyFormatToAllPages,
   onCreateNotepaper, 
   allNotepapers,
   onPrevPage,
@@ -96,6 +98,32 @@ export default function TextNotesSection({
   const [customHeight, setCustomHeight] = useState<number>(1131);
   const [isTopPanelOpen, setIsTopPanelOpen] = useState<boolean>(true);
   const [isBottomPanelOpen, setIsBottomPanelOpen] = useState<boolean>(true);
+  const [appliedSuccess, setAppliedSuccess] = useState<boolean>(false);
+
+  const handleApplyFormatToAll = () => {
+    if (!onApplyFormatToAllPages || !pageItem) return;
+    onApplyFormatToAllPages({
+      paperStyle,
+      pageSize,
+      hasMargin,
+      marginColor,
+      marginPosition,
+      marginPositionLeft,
+      marginPositionRight,
+      marginPositionTop,
+      marginPositionBottom,
+      marginStyle,
+      marginSide,
+      hasHorizontalMargin,
+      customWidth,
+      customHeight,
+      customMargins,
+    });
+    setAppliedSuccess(true);
+    setTimeout(() => {
+      setAppliedSuccess(false);
+    }, 2000);
+  };
 
   const sizePixels: Record<PageSize, { width: number; height: number }> = {
     Portrait: { width: 800, height: 1131 },
@@ -972,6 +1000,21 @@ export default function TextNotesSection({
                 <Sliders className="h-3 w-3" />
               </button>
             )}
+
+            <div className="h-4 w-[1px] bg-[#ebdcb9] mx-0.5"></div>
+            <button
+              type="button"
+              onClick={handleApplyFormatToAll}
+              className={`px-2 py-1 text-[10px] font-bold uppercase rounded transition-all flex items-center gap-1 ${
+                appliedSuccess
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse'
+                  : 'bg-[#8c2522] hover:bg-[#8c2522]/90 text-white cursor-pointer hover:scale-102 active:scale-98'
+              }`}
+              title="Apply this page's layout size, guidelines, margins, and paper pattern to all other pages in the workspace"
+            >
+              <LayoutTemplate className="h-3 w-3" />
+              <span>{appliedSuccess ? 'Applied!' : 'Apply to All Pages'}</span>
+            </button>
           </div>
 
         </div>
@@ -1242,6 +1285,23 @@ export default function TextNotesSection({
                   </div>
                 </div>
               )}
+
+              {/* Apply to All Pages in Floating Panel */}
+              <div className="border-t border-[#ebdcb9]/40 pt-2 pb-0.5 mt-1">
+                <button
+                  type="button"
+                  onClick={handleApplyFormatToAll}
+                  className={`w-full py-2 text-xs font-bold uppercase rounded-sm transition-all flex items-center justify-center gap-1.5 ${
+                    appliedSuccess
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse'
+                      : 'bg-[#8c2522] hover:bg-[#8c2522]/90 text-white cursor-pointer hover:scale-102 active:scale-98'
+                  }`}
+                  title="Apply layout size, guidelines, margins, and paper pattern to all other pages in the workspace"
+                >
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                  <span>{appliedSuccess ? 'Applied to All Sheets!' : 'Apply to All Pages'}</span>
+                </button>
+              </div>
             </div>
           )}
 

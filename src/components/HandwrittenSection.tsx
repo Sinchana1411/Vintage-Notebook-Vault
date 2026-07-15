@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   PenTool, Eraser, Download, Check, RefreshCw, Layers, Sliders,
-  HelpCircle, Settings, Play, Archive, Plus, Trash2, Grid, Square, Circle, ChevronLeft, ChevronRight 
+  HelpCircle, Settings, Play, Archive, Plus, Trash2, Grid, Square, Circle, ChevronLeft, ChevronRight, LayoutTemplate
 } from 'lucide-react';
 import { Notepaper, PageSize, PaperStyle, TableData, ShapeElement, CustomMargin } from '../types';
 import { colorClassMap } from './TextNotesSection';
@@ -24,6 +24,7 @@ interface DrawingStroke {
 interface HandwrittenSectionProps {
   pageItem: Notepaper | null;
   onUpdatePage: (updated: Notepaper) => void;
+  onApplyFormatToAllPages?: (format: Partial<Notepaper>) => void;
   onCreateNotepaper?: (title: string, chapterId: string) => void;
   allNotepapers?: Notepaper[];
   onPrevPage?: () => void;
@@ -37,6 +38,7 @@ interface HandwrittenSectionProps {
 export default function HandwrittenSection({ 
   pageItem, 
   onUpdatePage, 
+  onApplyFormatToAllPages,
   onCreateNotepaper, 
   allNotepapers,
   onPrevPage,
@@ -108,6 +110,32 @@ export default function HandwrittenSection({
 
   const [customWidth, setCustomWidth] = useState<number>(800);
   const [customHeight, setCustomHeight] = useState<number>(1131);
+  const [appliedSuccess, setAppliedSuccess] = useState<boolean>(false);
+
+  const handleApplyFormatToAll = () => {
+    if (!onApplyFormatToAllPages || !pageItem) return;
+    onApplyFormatToAllPages({
+      paperStyle,
+      pageSize,
+      hasMargin,
+      marginColor,
+      marginPosition,
+      marginPositionLeft,
+      marginPositionRight,
+      marginPositionTop,
+      marginPositionBottom,
+      marginStyle,
+      marginSide,
+      hasHorizontalMargin,
+      customWidth,
+      customHeight,
+      customMargins,
+    });
+    setAppliedSuccess(true);
+    setTimeout(() => {
+      setAppliedSuccess(false);
+    }, 2000);
+  };
 
   // Page classes
   const sizeClasses: Record<PageSize, string> = {
@@ -1175,6 +1203,21 @@ export default function HandwrittenSection({
                 <Sliders className="h-3 w-3" />
               </button>
             )}
+
+            <div className="h-4 w-[1px] bg-[#ebdcb9] mx-0.5"></div>
+            <button
+              type="button"
+              onClick={handleApplyFormatToAll}
+              className={`px-2 py-1 text-[10px] font-bold uppercase rounded transition-all flex items-center gap-1 ${
+                appliedSuccess
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse'
+                  : 'bg-[#8c2522] hover:bg-[#8c2522]/90 text-white cursor-pointer hover:scale-102 active:scale-98'
+              }`}
+              title="Apply this page's layout size, guidelines, margins, and paper pattern to all other pages in the workspace"
+            >
+              <LayoutTemplate className="h-3 w-3" />
+              <span>{appliedSuccess ? 'Applied!' : 'Apply to All Pages'}</span>
+            </button>
           </div>
 
         </div>
@@ -1477,6 +1520,23 @@ export default function HandwrittenSection({
                   </div>
                 </div>
               )}
+
+              {/* Apply to All Pages in Floating Panel */}
+              <div className="border-t border-[#ebdcb9]/40 pt-2 pb-0.5 mt-1">
+                <button
+                  type="button"
+                  onClick={handleApplyFormatToAll}
+                  className={`w-full py-2 text-xs font-bold uppercase rounded-sm transition-all flex items-center justify-center gap-1.5 ${
+                    appliedSuccess
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse'
+                      : 'bg-[#8c2522] hover:bg-[#8c2522]/90 text-white cursor-pointer hover:scale-102 active:scale-98'
+                  }`}
+                  title="Apply layout size, guidelines, margins, and paper pattern to all other pages in the workspace"
+                >
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                  <span>{appliedSuccess ? 'Applied to All Sheets!' : 'Apply to All Pages'}</span>
+                </button>
+              </div>
             </div>
           )}
 
