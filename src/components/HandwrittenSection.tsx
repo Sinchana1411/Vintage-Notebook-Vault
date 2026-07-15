@@ -1681,23 +1681,7 @@ export default function HandwrittenSection({
             );
           })}
 
-          {/* Core Title inputs */}
-          <div 
-            className="relative z-10 border-b border-[#ebdcb9] pb-3 flex justify-between items-end"
-            style={{ height: '96px', paddingBottom: '12px', marginBottom: '32px' }}
-          >
-            <div className="flex-1 select-text">
-              <input
-                type="text"
-                value={pageItem.title}
-                onChange={e => {
-                  onUpdatePage({ ...pageItem, title: e.target.value });
-                }}
-                className="w-full bg-transparent font-display text-2.5xl font-bold text-[#3e2723] outline-none border-b border-transparent hover:border-[#ebdcb9] focus:border-[#8c2522] tracking-wide"
-                placeholder="Title your canvas..."
-              />
-            </div>
-          </div>
+
 
           {/* Embedded Custom Tables Overlay */}
           {localTables.map((tbl, tIdx) => {

@@ -1525,23 +1525,7 @@ export default function TextNotesSection({
             );
           })}
 
-          {/* Heading */}
-          <div 
-            className="relative z-10 border-b border-[#ebdcb9] pb-3 flex justify-between items-end"
-            style={{ height: '96px', paddingBottom: '12px', marginBottom: '32px' }}
-          >
-            <div className="flex-1">
-              <input
-                type="text"
-                value={pageItem.title}
-                onChange={e => savePageChanges({ title: e.target.value })}
-                dir="ltr"
-                style={{ textAlign: 'left' }}
-                className="w-full bg-transparent font-display text-2.5xl font-bold text-[#3e2723] outline-none border-b border-transparent hover:border-[#ebdcb9] focus:border-[#8c2522] tracking-wide"
-                placeholder="Title your leaf..."
-              />
-            </div>
-          </div>
+
 
           {/* Core Interactive Editor */}
           <div
