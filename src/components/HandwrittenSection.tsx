@@ -1696,9 +1696,6 @@ export default function HandwrittenSection({
                 className="w-full bg-transparent font-display text-2.5xl font-bold text-[#3e2723] outline-none border-b border-transparent hover:border-[#ebdcb9] focus:border-[#8c2522] tracking-wide"
                 placeholder="Title your canvas..."
               />
-              <p className="text-[10px] text-[#5c4033] font-mono italic mt-1 uppercase">
-                Calligraphic Blank Canvas • Synchronized {new Date(pageItem.createdAt).toLocaleDateString()}
-              </p>
             </div>
           </div>
 
