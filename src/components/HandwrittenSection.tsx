@@ -2131,14 +2131,58 @@ export default function HandwrittenSection({
 
       {/* FLOATING ACTION TOGGLES (when panels are minimized) */}
       {!isTopPanelOpen && (
-        <button
-          onClick={() => setIsTopPanelOpen(true)}
-          className="absolute top-4 right-6 z-40 flex items-center gap-1.5 rounded-full border border-[#ebdcb9] bg-[#3e2723] px-3.5 py-1.5 text-xs font-bold text-[#fdfbf7] shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer animate-in fade-in slide-in-from-top-2"
-          title="Show main toolbar tools"
-        >
-          <Sliders className="h-3.5 w-3.5 animate-pulse" />
-          <span>Show Tools</span>
-        </button>
+        <div className="absolute top-4 right-6 z-45 flex items-center gap-2.5 rounded-full border border-[#ebdcb9] bg-[#3e2723] p-1.5 px-3.5 shadow-md text-xs font-bold text-[#fdfbf7] select-none animate-in fade-in slide-in-from-top-2">
+          {/* Page navigation when tools are hidden */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={!onPrevPage}
+              onClick={onPrevPage}
+              className={`p-1 rounded-full transition-all ${
+                onPrevPage 
+                  ? 'hover:bg-white/15 text-[#fdfbf7] cursor-pointer hover:scale-105 active:scale-95' 
+                  : 'text-stone-500 cursor-not-allowed opacity-40'
+              }`}
+              title={prevPageTitle ? `Previous Page: ${prevPageTitle}` : "Beginning of notebook"}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+
+            {pageIndexInfo && (
+              <span className="text-[10px] font-bold text-[#fdfbf7]/90 px-2 bg-[#ebdcb9]/15 rounded-sm font-mono" title="Current page index">
+                {pageIndexInfo}
+              </span>
+            )}
+
+            <button
+              type="button"
+              disabled={!onNextPage}
+              onClick={onNextPage}
+              className={`p-1 rounded-full transition-all ${
+                onNextPage 
+                  ? 'hover:bg-white/15 text-[#fdfbf7] cursor-pointer hover:scale-105 active:scale-95' 
+                  : 'text-stone-500 cursor-not-allowed opacity-40'
+              }`}
+              title={nextPageTitle ? `Next Page: ${nextPageTitle}` : "End of notebook"}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Vertical divider */}
+          <div className="h-4 w-[1px] bg-[#ebdcb9]/30"></div>
+
+          {/* Scribes panel restore trigger */}
+          <button
+            type="button"
+            onClick={() => setIsTopPanelOpen(true)}
+            className="flex items-center gap-1 hover:bg-white/10 text-[#ebdcb9] hover:text-[#fdfbf7] px-2 py-1 rounded transition-all cursor-pointer"
+            title="Show main toolbar tools"
+          >
+            <Sliders className="h-3.5 w-3.5" />
+            <span className="text-[11px]">Show Tools</span>
+          </button>
+        </div>
       )}
 
       {!isBottomPanelOpen && (
